@@ -1,0 +1,1214 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard','Noto Sans KR',sans-serif;background:#fafaf8;padding:20px 16px;font-size:13px}
+.wrap{max-width:1600px;margin:0 auto}
+h1{font-size:20px;font-weight:800;color:#1a1a1a}
+.hdr{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.logo{width:40px;height:40px;border-radius:10px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0}
+.uploads{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.upload{border:1.5px dashed #ccc;border-radius:10px;padding:16px 12px;background:#fff;cursor:pointer;text-align:center;transition:all .2s}
+.upload.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 4%,white)}
+.upload .utitle{font-size:13px;font-weight:700;color:#333}
+.upload.done .utitle{color:var(--c)}
+.upload .udesc{font-size:11px;color:#999;margin:4px 0}
+.upload .fname{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.upload input{display:none}
+
+/* 미매핑 알림 */
+.unmapped-banner{background:#fff8e1;border:1.5px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.unmapped-banner h3{font-size:14px;font-weight:700;color:#92400e;margin-bottom:10px}
+.unmapped-table{width:100%;border-collapse:collapse;font-size:12px}
+.unmapped-table th{background:#fef3c7;padding:6px 8px;text-align:left;font-weight:600}
+.unmapped-table td{padding:6px 8px;border-bottom:1px solid #fde68a}
+.unmapped-table select{padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;width:130px}
+
+.cfg{background:#fff;border:1px solid #e5e2da;border-radius:12px;padding:20px;margin-bottom:16px;display:none}
+.cfg.show{display:block}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cfg h3{font-size:13px;font-weight:700;margin-bottom:10px;color:#333}
+label.cfg-label{font-size:11px;color:#888;display:block;margin-bottom:3px}
+input.num{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:65px}
+.einp{padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:#f0edff;color:#5b21b6;margin-right:4px;margin-bottom:4px}
+
+.btn{padding:7px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary{background:#1a1a1a;color:#fff}
+.btn-primary:hover{background:#333}
+.btn-secondary{background:#fff;color:#1a1a1a;border:1px solid #1a1a1a}
+.btn-ghost{background:#f5f5f0;color:#555;border:1px solid #e0ddd5}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn:disabled{background:#ddd;color:#aaa;cursor:default}
+.del{border:none;background:none;color:#ef4444;cursor:pointer;font-size:15px;padding:0 2px}
+.actions{display:flex;gap:10px;margin-bottom:16px;align-items:center}
+.tabs{margin-left:auto;display:flex;gap:4px}
+.tab{padding:6px 14px;border-radius:6px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:600;cursor:pointer}
+.tab.active{border:1.5px solid #1a1a1a;background:#1a1a1a;color:#fff}
+.error-box{background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;display:none}
+.extra-row{display:flex;gap:5px;margin-bottom:6px;align-items:center}
+
+/* 결과 */
+.result-wrap{background:#fff;border-radius:12px;border:1px solid #e5e2da;overflow:hidden}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e5e2da}
+.card{padding:14px 16px;border-right:1px solid #e5e2da}
+.card:last-child{border-right:none}
+.card .lab{font-size:11px;color:#999;margin-bottom:3px}
+.card .val{font-size:18px;font-weight:800}
+.card .sub{font-size:12px;font-weight:600;margin-top:2px}
+.tbl-wrap{overflow-x:auto}
+table.main{width:100%;border-collapse:collapse;font-size:12.5px}
+table.main th{padding:7px 5px;font-size:11px;font-weight:600;text-align:center;white-space:nowrap}
+table.main td{padding:6px 8px}
+.gh{padding:7px 6px;font-size:11.5px;font-weight:700;text-align:center}
+.tc{text-align:center}.tr{text-align:right}
+.sub-row{font-weight:700;background:#f0f0ec;border-top:1px solid #ccc;border-bottom:1px solid #ccc}
+.total-row{font-weight:700;border-top:2px solid #1a1a1a;border-bottom:2px solid #1a1a1a}
+.row-red{background:#fef8f8}.row-green{background:#f6fef6}
+.gap-row td{height:6px;background:#fafaf8}
+
+/* 계산식 */
+.formula{background:#fff;border:1px solid #e5e2da;border-radius:12px;padding:24px}
+.formula-box{background:#fafaf8;border:1px solid #e5e2da;border-radius:8px;padding:16px;margin-bottom:16px;font-family:monospace;font-size:13px;line-height:2.2}
+table.corr{width:100%;font-size:13px;border-collapse:collapse}
+table.corr th{padding:8px 10px;text-align:left;background:#f5f5f0}
+table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
+
+/* 모달 */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.35);z-index:999;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:14px;max-width:800px;width:90%;max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e2da;background:#fafaf8}
+.modal-header h3{font-size:15px;font-weight:700;margin:0}
+.modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:#888;padding:0 4px}
+.modal-body{padding:16px 20px;overflow-y:auto;max-height:65vh}
+.modal-body table{width:100%;border-collapse:collapse;font-size:12.5px}
+.modal-body th{background:#f5f5f0;padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0}
+.modal-body td{padding:6px 10px;border-bottom:1px solid #f0ede5}
+</style>
+
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<div class="wrap">
+  <!-- 헤더 -->
+  <div class="hdr">
+    <div class="logo">S</div>
+    <div style="flex:1">
+      <h1>SCP 라인별 부하 분석</h1>
+      <p style="font-size:12px;color:#888;margin-top:2px">SCP판매예상 + 비재고 + 추가건 + 충족률보정 → 일투입 산출</p>
+    </div>
+    <button class="btn btn-ghost" onclick="toggleGuide()" id="guide-btn">📖 사용 설명서</button>
+    <button class="btn btn-ghost" onclick="toggleCfg()">⚙ 설정</button>
+  </div>
+
+  <!-- 파일 업로드 -->
+  <div class="uploads">
+    <label class="upload" id="u-scp" style="--c:#2563eb">
+      <div class="utitle">① SCP 운영계획</div>
+      <div class="udesc">판매예상·예상기말재고</div>
+      <div id="s-scp"></div>
+      <input type="file" accept=".xlsx,.xls" onchange="loadFile(this,'scp')">
+    </label>
+    <label class="upload" id="u-grd" style="--c:#059669">
+      <div class="utitle">② 재고품목 리스트</div>
+      <div class="udesc">현재고·목표재고·라인매핑</div>
+      <div id="s-grd"></div>
+      <input type="file" accept=".xlsx,.xls" onchange="loadFile(this,'grd')">
+    </label>
+    <label class="upload" id="u-prod" style="--c:#7c3aed">
+      <div class="utitle">③ 생산계획 (투입)</div>
+      <div class="udesc">비재고 비율 산출</div>
+      <div id="s-prod"></div>
+      <input type="file" accept=".xlsx,.xls" onchange="loadFile(this,'prod')">
+    </label>
+  </div>
+
+  <!-- 라인 미매핑 품목 알림 -->
+  <div id="unmapped-banner" class="unmapped-banner" style="display:none">
+    <h3>⚠ 라인 미매핑 품목 — 라인을 지정해주세요</h3>
+    <p style="font-size:12px;color:#78350f;margin-bottom:10px">아래 품목들은 재고리스트에 라인 정보가 없습니다. 라인을 지정하면 분석에 포함됩니다.</p>
+    <table class="unmapped-table">
+      <thead><tr><th>브랜드</th><th>시리즈</th><th>조합코드</th><th>품목명</th><th>4월판매예상</th><th>라인 지정</th></tr></thead>
+      <tbody id="unmapped-body"></tbody>
+    </table>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-sm btn-ghost" onclick="applyUnmapped()">✓ 지정 적용 후 재계산</button>
+      <button class="btn btn-sm btn-ghost" onclick="dismissUnmapped()">무시하고 계속</button>
+    </div>
+  </div>
+
+  <!-- 사용 설명서 패널 -->
+  <div class="cfg" id="guide-panel" style="font-size:13px;line-height:1.7">
+    <h3 style="font-size:15px;margin-bottom:16px">📖 SCP 라인별 부하 분석 사용 설명서</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <h4 style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:10px;border-bottom:2px solid #dbeafe;padding-bottom:6px">📁 파일 준비 방법</h4>
+        <div style="margin-bottom:14px">
+          <div style="font-weight:700;color:#2563eb;margin-bottom:4px">① SCP 운영계획</div>
+          <div style="color:#444">SCM팀에서 받은 <strong>의자 SCP 운영계획 엑셀 파일</strong>을 그대로 업로드합니다.</div>
+          <div style="color:#888;font-size:12px;margin-top:3px">예: 시디즈 입고가 기준 5-7월 의자 SCP 운영 계획.xlsx</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="font-weight:700;color:#059669;margin-bottom:4px">② 재고품목 리스트</div>
+          <div style="color:#444"><strong>ERP → 일반 생산계획관리</strong> 창에서 조회 후 엑셀로 변환하여 업로드합니다.</div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;margin-top:6px;font-size:12px;color:#166534">
+            <div>1. ERP → 생산관리 → 일반 생산계획관리 접속</div>
+            <div>2. 해당 월 기준으로 전체 조회</div>
+            <div>3. 상단 [엑셀저장] 클릭 → 파일 저장</div>
+            <div>4. 저장된 grd_list00_XXXXXX.xls 업로드</div>
+          </div>
+          <div style="color:#888;font-size:12px;margin-top:3px">포장라인·현재고·목표재고 정보가 포함된 파일</div>
+        </div>
+        <div>
+          <div style="font-weight:700;color:#7c3aed;margin-bottom:4px">③ 생산계획 (투입)</div>
+          <div style="color:#444"><strong>ERP → 일반 생산계획정보</strong> 창에서 <strong>전월 한 달 전체</strong> 조회 후 엑셀 변환하여 업로드합니다.</div>
+          <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px 10px;margin-top:6px;font-size:12px;color:#6b21a8">
+            <div>1. ERP → 생산관리 → 일반 생산계획정보 접속</div>
+            <div>2. 조회기간: <strong>전월 1일 ~ 말일</strong> 입력</div>
+            <div>3. 전체 조회 → [엑셀저장] 클릭</div>
+            <div>4. 저장된 Grid00_XXXXXX.xls 업로드</div>
+          </div>
+          <div style="color:#888;font-size:12px;margin-top:3px">비재고 비율 계산에 사용 (SCP에 없는 품목 = 비재고)</div>
+        </div>
+      </div>
+      <div>
+        <h4 style="font-size:13px;font-weight:700;color:#be185d;margin-bottom:10px;border-bottom:2px solid #fce7f3;padding-bottom:6px">⚙ 설정 항목 설명</h4>
+        <div style="margin-bottom:10px">
+          <div style="font-weight:700;margin-bottom:3px">분석 대상 월</div>
+          <div style="color:#444">분석할 월을 선택합니다. SCP 파일에서 해당 월의 판매예상량과 목표재고 열을 자동으로 찾습니다.</div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-weight:700;margin-bottom:3px">전월 / 당월 영업일</div>
+          <div style="color:#444">일투입 계산에 사용되는 영업일 수입니다. 달력 기준으로 직접 입력합니다.</div>
+          <div style="color:#888;font-size:12px">전월 투입(실적) ÷ 전월 영업일 = 전월 일투입</div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-weight:700;margin-bottom:3px">충족률 기준(%)</div>
+          <div style="color:#444">현재고가 목표재고 대비 이 비율 미만이면 부족분을 일투입에 추가합니다.</div>
+          <div style="color:#888;font-size:12px">기본값 90% → 충족률 90% 미만 라인만 보정</div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-weight:700;margin-bottom:3px">품목 이관 규칙</div>
+          <div style="color:#444">재고리스트에 등록된 라인과 실제 포장라인이 다를 때 사용합니다.</div>
+          <div style="color:#888;font-size:12px">예) 내수 6200 코드 → T40-2_F 대신 벌크 라인으로 집계</div>
+        </div>
+        <div>
+          <div style="font-weight:700;margin-bottom:3px">추가건</div>
+          <div style="color:#444">SCP에 없는 물량(대량 수주건, 신규 출시 초도물량 등)을 수기로 추가합니다.</div>
+          <div style="color:#888;font-size:12px">예) TC13 퍼시스 대량건 +1,500 / 만타 가죽라인 +500</div>
+        </div>
+        <div style="margin-top:16px;padding:10px;background:#fafaf8;border-radius:8px;font-size:12px;color:#666;border:1px solid #e5e2da">
+          <div style="font-weight:700;margin-bottom:4px">📌 일투입 계산식</div>
+          <div>전월 일투입 = 전월 전체 투입 ÷ 전월 영업일</div>
+          <div>당월 필요생산 = 목표입고 + 당월목표재고 − 현재고<br>당월 일투입 = (목표입고 + 비재고 유지 + 추가건) ÷ 당월 영업일</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 패널 -->
+  <div class="cfg" id="cfg-panel">
+    <div class="cfg-grid">
+      <div>
+        <h3>기본 설정</h3>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <div>
+            <label class="cfg-label">분석 대상 월</label>
+            <select class="einp" id="target-month" style="width:80px">
+              <option value="4">4월</option>
+              <option value="5" selected>5월</option>
+              <option value="6">6월</option>
+            </select>
+          </div>
+          <div><label class="cfg-label">전월 영업일</label><input class="num" type="number" id="wp" value="21"></div>
+          <div><label class="cfg-label">당월 영업일</label><input class="num" type="number" id="wn" value="22"></div>
+          <div><label class="cfg-label">충족률 기준(%)</label><input class="num" type="number" id="ft" value="90"></div>
+        </div>
+        <h3>품목 이관 규칙</h3>
+        <p style="font-size:11px;color:#888;margin-bottom:8px">재고리스트 라인과 실제 포장라인이 다른 품목을 지정합니다.</p>
+        <div id="transfer-list" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+          <input class="einp" id="tr-pattern" placeholder="코드 패턴 (예: 6200)" style="width:140px">
+          <input class="einp" id="tr-to" placeholder="이관 라인 (예: 벌크)" style="width:120px">
+          <button class="btn btn-ghost btn-sm" onclick="addTransferInline()">+ 추가</button>
+        </div>
+      </div>
+      <div>
+        <h3>추가건 / 신규 제품 수기 입력</h3>
+        <p style="font-size:11px;color:#888;margin-bottom:8px">대량건, 신규 출시, SCP 미반영 물량 등을 수기로 추가합니다.</p>
+        <div id="extra-list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addExtra()">+ 추가건</button>
+
+        <h3 style="margin-top:20px">라인별 CAPA (일 생산능력)</h3>
+        <p style="font-size:11px;color:#888;margin-bottom:8px">각 라인의 일일 최대 생산능력을 입력합니다. 0이면 무제한으로 간주합니다.</p>
+        <div id="capa-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 실행 버튼 -->
+  <div class="actions">
+    <button class="btn btn-primary" id="run-btn" disabled onclick="runCalc()">분석 실행</button>
+    <button class="btn btn-secondary" id="dl-btn" style="display:none" onclick="dlExcel()">엑셀 다운로드</button>
+    <span id="calc-info" style="font-size:12px;color:#888"></span>
+    <div class="tabs" id="tabs" style="display:none">
+      <button class="tab active" onclick="showTab('result',this)">분석 결과</button>
+      <button class="tab" onclick="showTab('formula',this)">계산식</button>
+      <button class="tab" onclick="showTab('guide',this)">사용 설명서</button>
+    </div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+  <div id="modal-container"></div>
+  <div id="result-area"></div>
+</div>
+
+<script>
+// ── 상수 ──
+const SHEETS=["시디즈 의자 SCP","퍼시스 의자 SCP","일룸 의자 SCP","데스커 의자 SCP"];
+const BRANDS=["시디즈","퍼시스","일룸","데스커"];
+const EXCL=["A/S포장","도장(반제품)","재봉(반제품)","로비&수출포장(조립5)","리라이프","틸트(반제품)","우레탄","T30"];
+const ALLLINES=["TC13(조립5)","벌크","도장(외부출고)","T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","M02","후레임2","후레임3","플라이트","가죽","부품포장","(직접입력)"];
+
+// ── 상태 ──
+let parsed={};
+let transfers=[
+  {pattern:"6200",from:"T40-2_F",to:"벌크",expEx:true,label:"내수6200→벌크(수출제외)"},
+  {code:"ITY00BT00A",to:"벌크",label:"비토스터디→벌크"},
+  {code:"HCH3801H",to:"벌크",label:"비토헤드→벌크"}
+];
+let extras=[];
+let lineCapa={  // 라인별 CAPA 기본값
+  "TC13(조립5)":350,"벌크":250,"도장(외부출고)":200,
+  "T40-2_F":150,"T40_FKD":100,"T80":100,
+  "T50-2":150,"T50-1":100,"T55":80,
+  "M02":150,"후레임2":150,"후레임3":150,
+  "플라이트":50,"가죽":50,"부품포장":200
+};
+let manualLineMap={};
+let unmappedItems=[];
+let resultData=null;
+let currentTab='result';
+let lastAnalysis=null;
+let files={scp:'',grd:'',prod:''};  // 파일명 추적
+
+// ── 유틸 ──
+const N=v=>{const n=parseFloat(String(v??"").replace(/,/g,""));return isNaN(n)?0:n};
+const F=n=>Math.round(n).toLocaleString();
+const D=n=>n.toFixed(1);
+const DC=(v,t=10)=>v<-t?"#dc2626":v>t?"#16a34a":"inherit";
+
+// ── UI 초기화 ──
+function toggleCfg(){document.getElementById('cfg-panel').classList.toggle('show');document.getElementById('guide-panel').classList.remove('show');}
+function toggleGuide(){document.getElementById('guide-panel').classList.toggle('show');document.getElementById('cfg-panel').classList.remove('show');}
+
+function renderTransfers(){
+  document.getElementById('transfer-list').innerHTML=transfers.map((t,i)=>
+    `<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px">
+      <span class="pill">${t.label}</span>
+      <button class="del" onclick="transfers.splice(${i},1);renderTransfers()">✕</button>
+    </div>`).join('');
+}
+
+function addTransfer(){
+  const p=document.getElementById('tr-pattern')?.value.trim();
+  const to=document.getElementById('tr-to')?.value.trim();
+  if(p&&to){transfers.push({pattern:p,to,label:`${p}→${to}`});renderTransfers();}
+}
+
+function addTransferInline(){
+  const p=document.getElementById('tr-pattern').value.trim();
+  const to=document.getElementById('tr-to').value.trim();
+  if(!p||!to){showError('코드 패턴과 이관 라인을 모두 입력해주세요.');return;}
+  transfers.push({pattern:p,to,label:`${p}→${to}`});
+  document.getElementById('tr-pattern').value='';
+  document.getElementById('tr-to').value='';
+  renderTransfers();
+}
+
+function renderExtras(){
+  document.getElementById('extra-list').innerHTML=extras.map((ex,i)=>`
+    <div class="extra-row">
+      <select class="einp" style="width:120px" onchange="extras[${i}].line=this.value">
+        <option value="">라인 선택</option>
+        ${ALLLINES.filter(l=>l!=='(직접입력)').map(l=>`<option ${ex.line===l?"selected":""}>${l}</option>`).join('')}
+      </select>
+      <input class="einp" style="width:65px" type="number" placeholder="수량" value="${ex.qty||''}" oninput="extras[${i}].qty=Number(this.value)">
+      <input class="einp" style="width:55px" placeholder="브랜드" value="${ex.brand||''}" oninput="extras[${i}].brand=this.value">
+      <input class="einp" style="width:80px" placeholder="시리즈" value="${ex.series||''}" oninput="extras[${i}].series=this.value">
+      <input class="einp" style="flex:1" placeholder="비고 (예: 퍼시스 대량건)" value="${ex.label||''}" oninput="extras[${i}].label=this.value">
+      <button class="del" onclick="extras.splice(${i},1);renderExtras()">✕</button>
+    </div>`).join('');
+}
+
+function addExtra(){extras.push({line:"",qty:0,brand:"",series:"",label:""});renderExtras();}
+
+function renderCapa(){
+  const lines=ALLLINES.filter(l=>l!=='(직접입력)');
+  document.getElementById('capa-list').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px">
+      ${lines.map(l=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+        <span style="font-size:11px;color:#555;width:90px;text-align:right">${l}</span>
+        <input class="einp" type="number" style="width:60px;font-size:12px" value="${lineCapa[l]||''}" placeholder="0"
+          oninput="lineCapa['${l.replace(/'/g,"\\'")}']=Number(this.value)">
+      </div>`).join('')}
+    </div>`;
+}
+renderCapa();
+
+// ── 앱 시작 시 직전 분석 결과 로드 ──
+async function loadLastAnalysis(){
+  try{
+    const raw=await window.storage?.get('lastAnalysis');
+    if(!raw||!raw.value)return;
+    const saved=JSON.parse(raw.value);
+    if(!saved||!saved.data)return;
+    lastAnalysis=saved;
+    // 설정 복원
+    if(saved.lineCapa){lineCapa={...lineCapa,...saved.lineCapa};renderCapa();}
+    if(saved.wp){document.getElementById('wp').value=saved.wp;}
+    if(saved.wn){document.getElementById('wn').value=saved.wn;}
+    if(saved.targetMonth){document.getElementById('target-month').value=saved.targetMonth;}
+    if(saved.extras&&saved.extras.length>0){extras=saved.extras;renderExtras();}
+    // 직전 결과 표시
+    renderLastAnalysis(saved);
+  }catch(e){console.warn('이전 분석 로드 실패:',e);}
+}
+
+function renderLastAnalysis(saved){
+  const area=document.getElementById('result-area');
+  const ts=saved.timestamp?new Date(saved.timestamp):null;
+  const timeStr=ts?`${ts.getFullYear()}.${(ts.getMonth()+1+'').padStart(2,'0')}.${(ts.getDate()+'').padStart(2,'0')} ${(ts.getHours()+'').padStart(2,'0')}:${(ts.getMinutes()+'').padStart(2,'0')}`:'';
+  const data=saved.data;
+  const tots=data.reduce((a,r)=>{a.cnt+=r.cnt;a.d3+=r.d3;a.d4+=r.d4;a.tgtProd+=(r.tgtProd||0);a.sale+=(r.sale||0);a.tgt_prev+=(r.tgt_prev||0);a.tgt_cur+=(r.tgt_cur||0);a.sh+=(r.sh||0);return a;},{cnt:0,d3:0,d4:0,tgtProd:0,sale:0,tgt_prev:0,tgt_cur:0,sh:0});
+  const tm=saved.targetMonth||5;
+  const pm=tm-1;
+  const prods=data.filter(r=>r.line!=="부품포장");
+  const parts=data.filter(r=>r.line==="부품포장");
+  
+  const mkMiniRow=r=>{
+    const dc=r.dd<0?'#dc2626':r.dd>0?'#16a34a':'#888';
+    const capaTd=r.capa>0?`<td class="tc" style="font-size:11px">${r.capa}</td><td class="tc" style="color:${r.capaRemain<0?'#dc2626':r.capaRemain<30?'#f59e0b':'#16a34a'};font-size:11px;font-weight:${r.capaRemain<0?700:400}">${r.capaRemain!==null?((r.capaRemain>=0?'+':'')+D(r.capaRemain)):'-'}</td>`:`<td class="tc" style="color:#ccc;font-size:11px">-</td><td class="tc" style="color:#ccc;font-size:11px">-</td>`;
+    return `<tr style="border-bottom:1px solid #f0ede5">
+      <td style="padding:5px 8px;font-weight:600;font-size:12px">${r.line}</td>
+      <td class="tc" style="font-size:12px">${D(r.d3)}</td>
+      <td class="tc" style="font-size:12px;font-weight:600">${D(r.d4)}</td>
+      <td class="tc" style="color:${dc};font-weight:${Math.abs(r.dd)>10?700:400};font-size:12px">${r.dd>=0?'+':''}${D(r.dd)}</td>
+      <td class="tc" style="color:${dc};font-size:12px">${r.dr>=0?'+':''}${r.dr.toFixed(1)}%</td>
+      ${capaTd}
+    </tr>`;
+  };
+  const mkMiniSub=(rows,label)=>{
+    const s=rows.reduce((a,r)=>{a.d3+=r.d3;a.d4+=r.d4;return a;},{d3:0,d4:0});
+    const dd=+(s.d4-s.d3).toFixed(1);const dr=s.d3>0?+((s.d4-s.d3)/s.d3*100).toFixed(1):0;
+    return `<tr style="font-weight:700;background:#f5f5f0;border-top:1px solid #ddd;border-bottom:1px solid #ddd">
+      <td style="padding:5px 8px;font-size:12px">${label}</td>
+      <td class="tc" style="font-size:12px">${D(s.d3)}</td><td class="tc" style="font-size:12px">${D(s.d4)}</td>
+      <td class="tc" style="color:${DC(dd)};font-size:12px">${dd>=0?'+':''}${D(dd)}</td>
+      <td class="tc" style="color:${DC(dr)};font-size:12px">${dr>=0?'+':''}${dr.toFixed(1)}%</td>
+      <td colspan="2"></td></tr>`;
+  };
+  
+  // CAPA 현황
+  const capaLines=data.filter(r=>r.capa>0);
+  const overCapa=capaLines.filter(r=>r.capaRemain<0).sort((a,b)=>a.capaRemain-b.capaRemain);
+  const looseCapa=capaLines.filter(r=>r.capaRemain>=0).sort((a,b)=>b.capaRemain-a.capaRemain);
+  const fmtOver=r=>`${r.line}(${D(Math.abs(r.capaRemain))}개/일, ${Math.abs(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 부족)`;
+  const fmtLoose=r=>`${r.line}(${D(r.capaRemain)}개/일, ${(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 여유)`;
+
+  area.innerHTML=`
+    <div style="background:#fff;border:1px solid #e5e2da;border-radius:12px;overflow:hidden">
+      <div style="padding:16px 20px;background:#fafaf8;border-bottom:1px solid #e5e2da;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#1a1a1a">📋 직전 분석 결과 — ${tm}월 SCP 부하 분석</div>
+          <div style="font-size:12px;color:#888;margin-top:4px">
+            분석 시각: ${timeStr} · 사용 파일: ${saved.files?.scp||'-'} / ${saved.files?.grd||'-'} / ${saved.files?.prod||'-'}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#888">파일을 올리고 [분석 실행] 하면 새 결과로 갱신됩니다</div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e5e2da">
+        <div class="card"><div class="lab">당월 목표입고</div><div class="val">${F(tots.tgtProd||tots.sale)}</div></div>
+        <div class="card"><div class="lab">일투입 (${pm}월→${tm}월)</div><div class="val" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${D(tots.d3)} → ${D(tots.d4)}</div><div class="sub" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${tots.d4-tots.d3>=0?'+':''}${D(tots.d4-tots.d3)}</div></div>
+        <div class="card"><div class="lab">목표재고 (${pm}월→${tm}월)</div><div class="val" style="color:#7c3aed">${F(tots.tgt_prev)} → ${F(tots.tgt_cur)}</div></div>
+        <div class="card"><div class="lab">예상 목표재고 부족분</div><div class="val" style="color:${tots.sh>0?'#dc2626':'#888'}">${F(tots.sh)}개</div></div>
+      </div>
+      
+      ${capaLines.length>0?`<div style="padding:14px 20px;border-bottom:1px solid #e5e2da;background:#faf5ff">
+        <div style="font-size:13px;font-weight:700;color:#6b21a8;margin-bottom:6px">⚡ CAPA 현황</div>
+        <div style="font-size:12px;line-height:1.8">
+          ${overCapa.length>0?`<div><span style="color:#dc2626;font-weight:700">초과 ${overCapa.length}개:</span> ${overCapa.map(fmtOver).join(', ')}</div>`:`<div style="color:#16a34a">✓ CAPA 초과 라인 없음</div>`}
+          ${looseCapa.length>0?`<div><span style="color:#16a34a;font-weight:700">여유 ${looseCapa.length}개:</span> ${looseCapa.map(fmtLoose).join(', ')}</div>`:''}
+        </div>
+      </div>`:''}
+      
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#1a1a1a;color:#fff">
+            <th style="padding:6px 8px;font-size:11px">라인</th>
+            <th style="padding:6px 8px;font-size:11px">${pm}월</th>
+            <th style="padding:6px 8px;font-size:11px">${tm}월</th>
+            <th style="padding:6px 8px;font-size:11px">증감</th>
+            <th style="padding:6px 8px;font-size:11px">증감률</th>
+            <th style="padding:6px 8px;font-size:11px">CAPA</th>
+            <th style="padding:6px 8px;font-size:11px">잔여</th>
+          </tr></thead>
+          <tbody>
+            ${prods.map(mkMiniRow).join('')}
+            ${mkMiniSub(prods,'제품 소계')}
+            <tr><td colspan="7" style="height:4px;background:#fafaf8"></td></tr>
+            ${parts.map(mkMiniRow).join('')}
+            ${parts.length?mkMiniSub(parts,'부품 소계'):''}
+            <tr><td colspan="7" style="height:4px;background:#fafaf8"></td></tr>
+            ${mkMiniSub(data,'합계')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// 페이지 로드 시 실행
+loadLastAnalysis();
+
+// ── 라인 매핑 ──
+function gLine(cb,lm){
+  // 1. 수기 지정 우선
+  if(manualLineMap[cb])return manualLineMap[cb];
+  // 2. lineMap 정확 매칭
+  let ln=lm[cb];
+  if(!ln){const cd=cb.split("-")[0];ln=lm[cd];
+    if(!ln){
+      for(let l=Math.min(10,cd.length);l>=3;l--){
+        for(const[k,v]of Object.entries(lm)){if(k.startsWith(cd.substring(0,l))){ln=v;break;}}
+        if(ln)break;
+      }
+    }
+  }
+  // 3. 이관 규칙 적용
+  if(ln){const cd=cb.split("-")[0];
+    for(const t of transfers){
+      if(t.pattern&&cd.includes(t.pattern)&&(!t.from||ln===t.from))ln=t.to;
+      if(t.code&&cd.startsWith(t.code))ln=t.to;
+    }
+  }
+  return ln;
+}
+
+// ── 파싱 ──
+// 월별 컬럼 구조: row1에 월 표기(4월/5월/6월), row2에 세부 항목
+// 각 월 블록에서 '판매예상량', '목표재고'/'타겟재고' 열 위치를 동적 탐지
+function findMonthCols(raw, targetMonth){
+  const row1 = raw[1] || [];
+  const row2 = raw[2] || [];
+  const monthLabel = `${targetMonth}월`;
+  let startCol = -1;
+  for(let i=0;i<row1.length;i++){
+    if(String(row1[i]??'').trim()===monthLabel){startCol=i;break;}
+  }
+  if(startCol<0) return null;
+  let endCol = row1.length;
+  for(let i=startCol+1;i<row1.length;i++){
+    if(String(row1[i]??'').trim().match(/^\d+월$/)){endCol=i;break;}
+  }
+  let saleCol=-1, tgtCol=-1, prodCol=-1;
+  for(let i=startCol;i<endCol;i++){
+    const h=String(row2[i]??'').trim();
+    if(h==='판매예상량' && saleCol<0) saleCol=i;
+    if((h==='목표재고'||h==='타겟재고') && tgtCol<0) tgtCol=i;
+    if(h==='목표 입고' && prodCol<0) prodCol=i;
+  }
+  return{saleCol,tgtCol,prodCol,startCol,endCol};
+}
+
+function pSCP(wb){
+  const targetMonth=parseInt(document.getElementById('target-month')?.value||5);
+  const items=[],combos=new Set();
+  for(let si=0;si<4;si++){
+    const b=BRANDS[si],ws=wb.Sheets[SHEETS[si]];if(!ws)continue;
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    const cols=findMonthCols(raw,targetMonth);
+    if(!cols){console.warn(`${SHEETS[si]}: ${targetMonth}월 컬럼 탐지 실패`);continue;}
+    const{saleCol,tgtCol,prodCol}=cols;
+    if(saleCol<0){console.warn(`${SHEETS[si]}: 판매예상량 컬럼 없음`);continue;}
+    for(let i=3;i<raw.length;i++){const r=raw[i];
+      if(String(r[7]??"").trim()!=="재고"||String(r[6]??"").trim()!=="사용")continue;
+      const sup=String(r[9]??"").trim();
+      if(b==="시디즈"?sup!=="시디즈제품":!sup.includes("평택"))continue;
+      const c=String(r[4]??"").trim();if(!c)continue;
+      combos.add(c);
+      const saleVal=N(r[saleCol]);
+      const tgtProd=prodCol>=0?N(r[prodCol]):0;  // 목표 입고량
+      items.push({brand:b,series:String(r[0]??"").trim(),combo:c,name:String(r[5]??"").trim().substring(0,40),
+        sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0});
+    }
+  }
+  return{items,combos,targetMonth};
+}
+
+function pGrd(wb){
+  const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+  const lm={},im={},tm={};
+  for(let i=2;i<raw.length;i++){
+    const r=raw[i],cd=String(r[1]??"").trim(),cl=String(r[2]??"").trim();
+    if(!cd||cd==="undefined")continue;
+    const cb=`${cd}-${cl}`;
+    let ln=String(r[4]??"").trim().replace("라인]","");
+    if(!ln||ln==="undefined"||ln==="nan")continue;
+    lm[cb]=ln;if(!lm[cd])lm[cd]=ln;im[cb]=N(r[7]);tm[cb]=N(r[6]);
+  }
+  return{lm,im,tm};
+}
+
+function pProd(wb,combos){
+  const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+  const ld={};
+  const prodItems={};  // 라인별 품목 상세: {combo → qty}
+  for(let i=1;i<raw.length;i++){
+    const r=raw[i];
+    let ln=String(r[12]??"").trim().replace("라인]","");
+    if(!ln||EXCL.includes(ln))continue;
+    const cd=String(r[3]??"").trim(),cl=String(r[5]??"").trim(),q=N(r[8]),cb=`${cd}-${cl}`,ex2=String(r[16]??"").trim();
+    for(const t of transfers){
+      if(t.pattern&&cd.includes(t.pattern)&&(!t.from||ln===t.from)){if(t.expEx&&ex2.includes("수출"))continue;ln=t.to;}
+      if(t.code&&cd.startsWith(t.code))ln=t.to;
+    }
+    if(!ld[ln])ld[ln]={total:0,nonScp:0};
+    ld[ln].total+=q;
+    if(!combos.has(cb))ld[ln].nonScp+=q;
+    // 품목별 상세 보존
+    if(!prodItems[ln])prodItems[ln]={};
+    prodItems[ln][cb]=(prodItems[ln][cb]||0)+q;
+  }
+  for(const d of Object.values(ld))d.ratio=d.total>0?(d.nonScp/d.total*100):0;
+  ld._items=prodItems;  // 품목별 상세 첨부
+  return ld;
+}
+
+// ── 파일 로딩 ──
+function loadFile(input,type){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      if(type==="scp"){
+        parsed.scp=pSCP(wb);files.scp=file.name;
+        document.getElementById('s-scp').innerHTML=`<div class="fname" style="background:#dbeafe;color:#2563eb">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${parsed.scp.items.length}건 · ${parsed.scp.targetMonth}월 기준</div>`;
+      }else if(type==="grd"){
+        parsed.grd=pGrd(wb);files.grd=file.name;
+        document.getElementById('s-grd').innerHTML=`<div class="fname" style="background:#d1fae5;color:#059669">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.grd.lm).length}건</div>`;
+      }else if(type==="prod"){
+        if(!parsed.scp){showError("SCP를 먼저 업로드하세요");return;}
+        parsed.prod=pProd(wb,parsed.scp.combos);files.prod=file.name;
+        document.getElementById('s-prod').innerHTML=`<div class="fname" style="background:#ede9fe;color:#7c3aed">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.prod).length}라인</div>`;
+      }
+      document.getElementById('u-'+type).classList.add('done');
+      const allReady=parsed.scp&&parsed.grd&&parsed.prod;
+      document.getElementById('run-btn').disabled=!allReady;
+      // 모두 업로드 시 미매핑 감지
+      if(allReady)detectUnmapped();
+      hideError();
+    }catch(err){showError(`파일 오류: ${err.message}`);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── 미매핑 감지 ──
+function detectUnmapped(){
+  if(!parsed.scp||!parsed.grd)return;
+  const{items}=parsed.scp,{lm}=parsed.grd;
+  unmappedItems=items.filter(it=>{
+    if(manualLineMap[it.combo])return false;
+    return !gLine(it.combo,lm);
+  });
+  if(unmappedItems.length===0){
+    document.getElementById('unmapped-banner').style.display='none';
+    return;
+  }
+  // 브랜드+시리즈 단위로 묶어서 표시
+  const groups={};
+  for(const it of unmappedItems){
+    const key=`${it.brand}|${it.series}`;
+    if(!groups[key])groups[key]={brand:it.brand,series:it.series,combos:[],totalSale:0};
+    groups[key].combos.push(it.combo);
+    groups[key].totalSale+=it.sale;
+  }
+  const rows=Object.values(groups).sort((a,b)=>b.totalSale-a.totalSale);
+  const tbody=document.getElementById('unmapped-body');
+  tbody.innerHTML=rows.map((g,i)=>`
+    <tr>
+      <td>${g.brand}</td>
+      <td style="font-weight:600">${g.series}</td>
+      <td style="font-size:11px;color:#888">${g.combos.slice(0,3).join(', ')}${g.combos.length>3?` 외 ${g.combos.length-3}건`:''}</td>
+      <td></td>
+      <td style="font-weight:600;color:#1a1a1a">${F(g.totalSale)}</td>
+      <td>
+        <select class="einp" id="umap-${i}" style="width:130px">
+          <option value="">라인 선택</option>
+          ${ALLLINES.filter(l=>l!=='(직접입력)').map(l=>`<option>${l}</option>`).join('')}
+          <option value="__direct">직접 입력...</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+  // 직접 입력 이벤트
+  rows.forEach((_,i)=>{
+    const sel=document.getElementById(`umap-${i}`);
+    sel.addEventListener('change',()=>{
+      if(sel.value==='__direct'){const v=prompt('라인명 입력');if(v)sel.value=v;else sel.value='';}
+    });
+  });
+  document.getElementById('unmapped-banner').style.display='block';
+  document.getElementById('calc-info').textContent=`⚠ ${unmappedItems.length}개 품목 라인 미배정`;
+}
+
+function applyUnmapped(){
+  const{lm}=parsed.grd;
+  const groups={};
+  for(const it of unmappedItems){
+    const key=`${it.brand}|${it.series}`;
+    if(!groups[key])groups[key]={combos:[]};
+    groups[key].combos.push(it.combo);
+  }
+  const rows=Object.values(groups);
+  let assigned=0;
+  rows.forEach((g,i)=>{
+    const sel=document.getElementById(`umap-${i}`);
+    const ln=sel?.value;
+    if(ln&&ln!=='__direct'){
+      for(const cb of g.combos){manualLineMap[cb]=ln;}
+      assigned++;
+    }
+  });
+  document.getElementById('unmapped-banner').style.display='none';
+  document.getElementById('calc-info').textContent=`${assigned}개 시리즈 라인 배정 완료`;
+  if(assigned>0)runCalc();
+}
+
+function dismissUnmapped(){
+  document.getElementById('unmapped-banner').style.display='none';
+  document.getElementById('calc-info').textContent='';
+}
+
+// ── 계산 ──
+function runCalc(){
+  try{
+    const wp=+document.getElementById('wp').value||21;
+    const wn=+document.getElementById('wn').value||22;
+    const ft=+document.getElementById('ft').value||90;
+    const{items,combos}=parsed.scp,{lm,im,tm}=parsed.grd,prod=parsed.prod;
+    const rows=[];
+    let skipped=0;
+    for(const it of items){
+      const ln=gLine(it.combo,lm);
+      if(!ln||EXCL.includes(ln)){if(!ln)skipped++;continue;}
+      rows.push({...it,line:ln,curInv:im[it.combo]||0,tgtMar:tm[it.combo]||0});
+    }
+    // 추가건
+    for(const e of extras){
+      if(e.line&&e.qty>0)rows.push({brand:e.brand||"추가",series:e.series||"추가건",combo:`ex_${Date.now()}_${Math.random()}`,name:e.label,sale:e.qty,inv:0,line:e.line,curInv:0,tgtMar:0,note:e.label});
+    }
+    // 라인별 목표·현재고 집계
+    const tbl={},cbl={};
+    for(const[cb,tg]of Object.entries(tm)){
+      const ln=gLine(cb,lm);
+      if(ln&&!EXCL.includes(ln)){tbl[ln]=(tbl[ln]||0)+tg;cbl[ln]=(cbl[ln]||0)+(im[cb]||0);}
+    }
+    // 라인별 집계
+    const la={};
+    const lineItems={};  // 라인별 품목 상세 보존
+    for(const r of rows){
+      if(!la[r.line])la[r.line]={sale:0,tgtProd:0,tgtScp:0,cur:0,tgt:0,cnt:0,notes:[]};
+      if(!lineItems[r.line])lineItems[r.line]=[];
+      const a=la[r.line];a.sale+=r.sale;a.tgtProd+=(r.tgtProd||0);a.tgtScp+=(r.tgtScp||0);a.cur+=r.curInv;a.tgt+=r.tgtMar;a.cnt++;
+      if(r.note)a.notes.push(r.note);
+      lineItems[r.line].push({combo:r.combo,name:r.name||'',brand:r.brand||'',series:r.series||'',
+        curInv:r.curInv,tgtMar:r.tgtMar,tgtScp:r.tgtScp||0,sale:r.sale,tgtProd:r.tgtProd||0});
+    }
+    // grd_list 기준 품목별 상세도 라인별로 모음 (SCP에 없는 품목 포함)
+    const grdByLine={};
+    for(const[cb,tg]of Object.entries(tm)){
+      const ln=gLine(cb,lm);
+      if(ln&&!EXCL.includes(ln)){
+        if(!grdByLine[ln])grdByLine[ln]=[];
+        grdByLine[ln].push({combo:cb,curInv:im[cb]||0,tgtMar:tg});
+      }
+    }
+    const res=[];
+    for(const[ln,a]of Object.entries(la)){
+      const pd=prod[ln]||{total:0,nonScp:0,ratio:0};
+      const d3=pd.total>0?pd.total/wp:0;
+      const t3=tbl[ln]||0,c3=cbl[ln]||0;
+      // 당월 목표재고(SCP) 기준 충족률
+      const tgtScpTotal=a.tgtScp;
+      const curTotal=a.cur;
+      const ff=tgtScpTotal>0?(curTotal/tgtScpTotal*100):100;
+      const sh=tgtScpTotal>0?Math.max(tgtScpTotal-curTotal,0):0;
+      // 당월 일투입 = (목표입고량 + 비재고) ÷ 영업일
+      const d4=(a.tgtProd+pd.nonScp)/wn,dd=d4-d3,dr=d3>0?(dd/d3*100):0;
+      // 목표재고: 전월=grd_list(t3), 당월=SCP(tgtScp)
+      const tgt_prev=t3;
+      const tgt_cur=a.tgtScp;
+      const td=tgt_cur-tgt_prev, tr2=tgt_prev>0?(td/tgt_prev*100):0;
+      const capa=lineCapa[ln]||0;
+      const capaRemain=capa>0?+(capa-d4).toFixed(1):null;
+      res.push({line:ln,cnt:a.cnt,sale:a.sale,tgtProd:a.tgtProd,cur:a.cur,tgt_prev,tgt_cur,td,tr:+tr2.toFixed(1),nr:+pd.ratio.toFixed(1),d3:+d3.toFixed(1),d4:+d4.toFixed(1),dd:+dd.toFixed(1),dr:+dr.toFixed(1),sh,ff:+ff.toFixed(1),capa,capaRemain,notes:a.notes.join(", ")});
+    }
+    res.sort((a,b)=>a.dr-b.dr);
+    resultData={data:res,wp,wn,ft,skipped,targetMonth:parsed.scp.targetMonth||5,lineItems,grdByLine};
+    // 직전 분석 결과 저장 (storage)
+    try{
+      const saveData={
+        data:res,wp,wn,ft,targetMonth:parsed.scp.targetMonth||5,
+        timestamp:new Date().toISOString(),
+        files:{scp:files.scp||'',grd:files.grd||'',prod:files.prod||''},
+        extras:extras.filter(e=>e.line&&e.qty>0),
+        lineCapa:{...lineCapa}
+      };
+      window.storage?.set('lastAnalysis',JSON.stringify(saveData));
+    }catch(e){console.warn('저장 실패:',e);}
+    const info=skipped>0?`⚠ ${skipped}개 품목 라인 미배정으로 제외됨`:`${res.length}개 라인 분석 완료`;
+    document.getElementById('calc-info').textContent=info;
+    document.getElementById('dl-btn').style.display='';
+    document.getElementById('tabs').style.display='flex';
+    hideError();
+    renderResult(currentTab);
+  }catch(e){showError(`계산 오류: ${e.message}`);}
+}
+
+function showTab(t,btn){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderResult(t);
+}
+
+// ── 결과 렌더링 ──
+function renderResult(tab='result'){
+  if(!resultData)return;
+  const{data,wp,wn,ft,skipped,targetMonth}=resultData;
+  const prevMonth=targetMonth-1;
+  const area=document.getElementById('result-area');
+  if(tab==='formula'){renderFormula(data,wp,wn,ft,targetMonth);return;}
+  const tots=data.reduce((a,r)=>{a.cnt+=r.cnt;a.sale+=r.sale;a.tgtProd+=(r.tgtProd||0);a.d3+=r.d3;a.d4+=r.d4;a.cur+=r.cur;a.tgt_prev+=(r.tgt_prev||0);a.tgt_cur+=(r.tgt_cur||0);a.sh+=r.sh;return a;},{cnt:0,sale:0,tgtProd:0,d3:0,d4:0,cur:0,tgt_prev:0,tgt_cur:0,sh:0});
+  const prods=data.filter(r=>r.line!=="부품포장"),parts=data.filter(r=>r.line==="부품포장");
+  const NCOLS=17;
+  const mkSub=(rows,label,cls)=>{
+    const s=rows.reduce((a,r)=>{a.cnt+=r.cnt;a.sale+=r.sale;a.tgtProd+=(r.tgtProd||0);a.d3+=r.d3;a.d4+=r.d4;a.cur+=r.cur;a.tgt_prev+=(r.tgt_prev||0);a.tgt_cur+=(r.tgt_cur||0);return a;},{cnt:0,sale:0,tgtProd:0,d3:0,d4:0,cur:0,tgt_prev:0,tgt_cur:0});
+    s.dd=+(s.d4-s.d3).toFixed(1);s.dr=s.d3>0?+((s.d4-s.d3)/s.d3*100).toFixed(1):0;
+    s.td=s.tgt_cur-s.tgt_prev;s.tr=s.tgt_prev>0?+((s.tgt_cur-s.tgt_prev)/s.tgt_prev*100).toFixed(1):0;
+    return `<tr class="${cls}">
+      <td style="padding:6px 8px">${label}</td><td class="tc">${s.cnt}</td><td></td>
+      <td class="tc">${D(s.d3)}</td><td class="tc">${D(s.d4)}</td>
+      <td class="tc" style="color:${DC(s.dd)}">${s.dd>=0?"+":""}${D(s.dd)}</td>
+      <td class="tc" style="color:${DC(s.dr)}">${s.dr>=0?"+":""}${s.dr.toFixed(1)}%</td>
+      <td class="tr">${F(s.tgtProd||s.sale)}</td>
+      <td class="tr">${F(s.cur)}</td>
+      <td class="tr">${F(s.tgt_prev)}</td>
+      <td class="tr">${F(s.tgt_cur)}</td>
+      <td class="tr" style="color:${DC(s.td,100)}">${s.td>=0?"+":""}${F(s.td)}</td>
+      <td class="tc" style="color:${DC(s.tr)}">${s.tr>=0?"+":""}${s.tr.toFixed(1)}%</td>
+      <td colspan="4"></td></tr>`;
+  };
+  const mkRow=r=>{const bg=r.dr<-20?"row-red":r.dr>20?"row-green":"";
+    const esc=r.line.replace(/'/g,"\\'");
+    return `<tr class="${bg}" style="border-bottom:1px solid #f0ede5">
+      <td style="padding:6px 8px;font-weight:700">${r.line}</td>
+      <td class="tc">${r.cnt}</td>
+      <td class="tc" style="color:${r.nr>=30?"#be185d":r.nr>=10?"#a855f7":"#888"};font-weight:${r.nr>=30?700:400}">${r.nr.toFixed(1)}%</td>
+      <td class="tc">${D(r.d3)}</td>
+      <td class="tc" style="font-weight:600">${D(r.d4)}</td>
+      <td class="tc" style="color:${DC(r.dd)};font-weight:${Math.abs(r.dd)>10?700:400};cursor:pointer;text-decoration:underline dotted" ondblclick="showDiffModal('${esc}')">${r.dd>=0?"+":""}${D(r.dd)}</td>
+      <td class="tc" style="color:${DC(r.dr)}">${r.dr>=0?"+":""}${r.dr.toFixed(1)}%</td>
+      <td class="tr">${F(r.tgtProd||r.sale)}</td>
+      <td class="tr">${F(r.cur)}</td>
+      <td class="tr">${F(r.tgt_prev)}</td>
+      <td class="tr">${F(r.tgt_cur)}</td>
+      <td class="tr" style="color:${DC(r.td,100)};font-weight:${Math.abs(r.td)>100?700:400}">${r.td>=0?"+":""}${F(r.td)}</td>
+      <td class="tc" style="color:${DC(r.tr)}">${r.tr>=0?"+":""}${r.tr.toFixed(1)}%</td>
+      <td class="tc" style="color:${r.ff<90?"#dc2626":"#888"};font-weight:${r.ff<90?700:400};cursor:pointer;text-decoration:underline dotted" ondblclick="showFulfillModal('${esc}')">${r.ff.toFixed(0)}%</td>
+      <td class="tc" style="color:${r.sh>0?"#dc2626":"#ccc"};${r.sh>0?"cursor:pointer;text-decoration:underline dotted":""}" ${r.sh>0?`ondblclick="showShortageModal('${esc}')"`:""}>${r.sh>0?F(r.sh):"-"}</td>
+      <td class="tc" style="color:#6b21a8">${r.capa>0?F(r.capa):'-'}</td>
+      <td class="tc" style="font-weight:${r.capaRemain!==null&&r.capaRemain<0?700:400};color:${r.capaRemain===null?'#ccc':r.capaRemain<0?'#dc2626':r.capaRemain<30?'#f59e0b':'#16a34a'}">${r.capaRemain!==null?((r.capaRemain>=0?'+':'')+D(r.capaRemain)+' <span style="font-size:10px;opacity:0.7">('+(r.capa>0?(r.capaRemain/r.capa*100).toFixed(0):0)+'%)</span>'):'-'}</td>
+      </tr>`;
+  };
+  // 카드 요약
+  const tgtDiffTot=tots.tgt_cur-tots.tgt_prev;
+  const tgtRateTot=tots.tgt_prev>0?(tgtDiffTot/tots.tgt_prev*100).toFixed(1)+"%" :"-";
+  area.innerHTML=`<div class="result-wrap">
+    <div class="cards">
+      <div class="card"><div class="lab">당월 목표입고</div><div class="val">${F(tots.tgtProd)}</div></div>
+      <div class="card"><div class="lab">일투입 (${prevMonth}월${wp}일→${targetMonth}월${wn}일)</div><div class="val" style="color:${tots.d4-tots.d3<0?"#dc2626":"#16a34a"}">${D(tots.d3)} → ${D(tots.d4)}</div><div class="sub" style="color:${tots.d4-tots.d3<0?"#dc2626":"#16a34a"}">${tots.d4-tots.d3>=0?"+":""}${D(tots.d4-tots.d3)}</div></div>
+      <div class="card"><div class="lab">목표재고 (${prevMonth}월→${targetMonth}월)</div><div class="val" style="color:#7c3aed">${F(tots.tgt_prev)} → ${F(tots.tgt_cur)}</div><div class="sub" style="color:${tgtDiffTot<0?"#dc2626":"#16a34a"}">${tgtDiffTot>=0?"+":""}${F(tgtDiffTot)} (${tgtRateTot})</div></div>
+      <div class="card"><div class="lab">예상 목표재고 부족분</div><div class="val" style="color:${tots.sh>0?"#dc2626":"#888"}">${F(tots.sh)}개</div><div class="sub" style="color:${tots.sh>0?"#dc2626":"#888"}">${tots.sh>0?`+${(tots.sh/wn).toFixed(1)}/일`:"해당없음"}</div></div>
+    </div>
+    ${skipped>0?`<div style="background:#fff8e1;padding:8px 16px;font-size:12px;color:#92400e;border-bottom:1px solid #fde68a">⚠ ${skipped}개 품목이 라인 미배정으로 제외되었습니다.</div>`:""}
+    ${buildAnalysisSummary(data,tots,prevMonth,targetMonth,wp,wn)}
+    <div class="tbl-wrap"><table class="main">
+      <thead>
+        <tr style="background:#fafaf8">
+          <th colspan="2" class="gh"></th>
+          <th colspan="5" class="gh" style="background:#fce7f3;color:#be185d">비재고 반영 일투입</th>
+          <th class="gh" style="background:#dbeafe;color:#1e40af">목표입고</th>
+          <th colspan="5" class="gh" style="background:#d1fae5;color:#166534">재고 · 목표재고</th>
+          <th colspan="2" class="gh" style="background:#fef3c7;color:#92400e">예상 목표재고 충족률</th>
+          <th colspan="2" class="gh" style="background:#ede9fe;color:#6b21a8">CAPA</th>
+        </tr>
+        <tr style="background:#1a1a1a;color:#fff">
+          <th>라인</th><th>품목</th><th>비재고%</th>
+          <th>${prevMonth}월(${wp}일)</th><th>${targetMonth}월(${wn}일)</th><th>증감</th><th>증감률</th>
+          <th>${targetMonth}월목표입고</th>
+          <th>현재고</th><th>${prevMonth}월목표</th><th>${targetMonth}월목표</th><th>목표증감</th><th>목표증감률</th>
+          <th>충족률</th><th>부족분</th>
+          <th>일CAPA</th><th>잔여여유</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${prods.map(mkRow).join('')}
+        ${mkSub(prods,"제품 소계","sub-row")}
+        <tr class="gap-row"><td colspan="17"></td></tr>
+        ${parts.map(mkRow).join('')}
+        ${parts.length?mkSub(parts,"부품 소계","sub-row"):""}
+        <tr class="gap-row"><td colspan="17"></td></tr>
+        ${mkSub(data,"합계","total-row")}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+
+// ── 분석 요약 생성 ──
+function buildAnalysisSummary(data,tots,prevMonth,targetMonth,wp,wn){
+  if(!resultData||!resultData.lineItems)return '';
+  const prod=parsed.prod||{};
+  
+  // 1. 전체 품목별 증감 TOP10 수집 (목표입고량 기준)
+  const allItems=[];
+  for(const r of data){
+    const scpItems=resultData.lineItems[r.line]||[];
+    const prodItems=(prod._items||{})[r.line]||{};
+    for(const it of scpItems){
+      if(it.combo.startsWith('ex_'))continue;
+      const prev=prodItems[it.combo]||0;
+      const cur=it.tgtProd||0;  // 목표입고량
+      const diff=cur-prev;
+      if(prev===0&&cur===0)continue;
+      allItems.push({line:r.line,code:it.combo.split('-')[0],color:it.combo.split('-').slice(1).join('-'),
+        name:it.name||'',prev,cur,diff,rate:prev>0?((diff/prev)*100):cur>0?999:0});
+    }
+  }
+  const topInc=allItems.filter(a=>a.diff>0).sort((a,b)=>b.diff-a.diff).slice(0,10);
+  const topDec=allItems.filter(a=>a.diff<0).sort((a,b)=>a.diff-b.diff).slice(0,10);
+  
+  // 2. CAPA 분석
+  const capaLines=data.filter(r=>r.capa>0);
+  const overCapa=capaLines.filter(r=>r.capaRemain<0).sort((a,b)=>a.capaRemain-b.capaRemain);
+  const looseCapa=capaLines.filter(r=>r.capaRemain>=0).sort((a,b)=>b.capaRemain-a.capaRemain);
+  
+  // CAPA 라인 표시 함수: 라인명(수량개/일, %부족/여유)
+  const fmtOver=r=>`${r.line}(${D(Math.abs(r.capaRemain))}개/일, ${Math.abs(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 부족)`;
+  const fmtLoose=r=>`${r.line}(${D(r.capaRemain)}개/일, ${(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 여유)`;
+  
+  // 3. HTML
+  const mkItemRow=(it,i)=>{
+    const dc=it.diff>0?'#16a34a':'#dc2626';
+    const rateStr=it.rate===999?'신규':(it.rate>=0?'+':'')+it.rate.toFixed(1)+'%';
+    return `<tr style="border-bottom:1px solid #f0ede5">
+      <td style="padding:4px 8px;font-size:12px;color:#888">${i+1}</td>
+      <td style="padding:4px 8px;font-size:12px">${it.line}</td>
+      <td style="padding:4px 8px;font-size:12px;font-weight:600">${it.code}</td>
+      <td style="padding:4px 8px;font-size:12px">${it.color}</td>
+      <td style="padding:4px 8px;font-size:12px;color:#666;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.name}</td>
+      <td style="padding:4px 8px;font-size:12px;text-align:right">${it.prev>0?F(it.prev):'-'}</td>
+      <td style="padding:4px 8px;font-size:12px;text-align:right">${it.cur>0?F(it.cur):'-'}</td>
+      <td style="padding:4px 8px;font-size:12px;text-align:right;color:${dc};font-weight:700">${it.diff>=0?'+':''}${F(it.diff)}</td>
+      <td style="padding:4px 8px;font-size:12px;text-align:center;color:${dc}">${rateStr}</td>
+    </tr>`;
+  };
+  
+  const thStyle='padding:4px 8px;font-size:11px;text-align:left';
+  const thR='padding:4px 8px;font-size:11px;text-align:right';
+  const thC='padding:4px 8px;font-size:11px;text-align:center';
+  
+  return `<div style="padding:20px;border-bottom:1px solid #e5e2da">
+    <div style="font-size:15px;font-weight:800;margin-bottom:14px;color:#1a1a1a">📋 ${targetMonth}월 SCP 라인별 부하 분석 요약</div>
+    
+    ${capaLines.length>0?`<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#6b21a8;margin-bottom:10px">⚡ CAPA 현황 요약</div>
+      <div style="font-size:13px;line-height:2;color:#333">
+        <div>${overCapa.length>0?`<span style="color:#dc2626;font-weight:700">CAPA 초과 ${overCapa.length}개 라인:</span> ${overCapa.map(fmtOver).join(', ')}`:`<span style="color:#16a34a;font-weight:600">✓ CAPA 초과 라인 없음</span>`}</div>
+        <div>${looseCapa.length>0?`<span style="color:#16a34a;font-weight:700">여유 ${looseCapa.length}개 라인:</span> ${looseCapa.map(fmtLoose).join(', ')}`:''}
+        </div>
+      </div>
+    </div>`:''}
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">📉 목표입고 감소 TOP 10 (${prevMonth}월 투입 대비, SCP 재고품목 한정)</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#fef2f2">
+            <th style="${thStyle}">#</th><th style="${thStyle}">라인</th><th style="${thStyle}">단품코드</th><th style="${thStyle}">색상</th><th style="${thStyle}">품목명</th>
+            <th style="${thR}">${prevMonth}월</th><th style="${thR}">${targetMonth}월</th><th style="${thR}">증감</th><th style="${thC}">증감률</th>
+          </tr></thead>
+          <tbody>${topDec.map((it,i)=>mkItemRow(it,i)).join('')}</tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:8px">📈 목표입고 증가 TOP 10 (${prevMonth}월 투입 대비, SCP 재고품목 한정)</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#f0fdf4">
+            <th style="${thStyle}">#</th><th style="${thStyle}">라인</th><th style="${thStyle}">단품코드</th><th style="${thStyle}">색상</th><th style="${thStyle}">품목명</th>
+            <th style="${thR}">${prevMonth}월</th><th style="${thR}">${targetMonth}월</th><th style="${thR}">증감</th><th style="${thC}">증감률</th>
+          </tr></thead>
+          <tbody>${topInc.map((it,i)=>mkItemRow(it,i)).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderFormula(data,wp,wn,ft,targetMonth){const prevMonth=targetMonth-1;
+  const corrections=
+    transfers.map(t=>`<tr><td>품목이관</td><td>${t.label}</td><td style="text-align:right;color:#7c3aed">라인재배치</td></tr>`).join('')+
+    extras.filter(e=>e.line&&e.qty>0).map(e=>`<tr><td>추가건</td><td>${e.label||e.series} (${e.line})</td><td style="text-align:right;color:#16a34a">+${e.qty}개 (+${(e.qty/wn).toFixed(1)}/일)</td></tr>`).join('')+
+    Object.entries(manualLineMap).map(([cb,ln])=>`<tr><td>수기지정</td><td>${cb}</td><td style="text-align:right;color:#f59e0b">${ln}</td></tr>`).join('')+
+    data.filter(r=>r.sh>0).map(r=>`<tr><td>충족률보정</td><td>${r.line} (충족률 ${r.ff}%)</td><td style="text-align:right;color:#dc2626">부족 ${F(r.sh)}개 (+${(r.sh/wn).toFixed(1)}/일)</td></tr>`).join('');
+  document.getElementById('result-area').innerHTML=`<div class="formula">
+    <h2>일투입 계산식</h2>
+    <div class="formula-box">
+      <div><strong>${prevMonth}월 일투입</strong> = 전월 전체 투입(재고+비재고) ÷ ${wp}일</div>
+      <div><strong>${targetMonth}월 일투입 = (SCP 목표입고량 + 비재고 유지 + 추가건) ÷ 영업일</div><div><strong>${targetMonth}월 일투입</strong> = (목표입고 + 비재고 유지 + 추가건) ÷ ${wn}일</div>
+      <div style="font-size:12px;color:#888;margin-top:8px">비재고 = 투입 품목 중 SCP에 없는 품목 (전월 실적 유지 가정)</div>
+      <div style="font-size:12px;color:#888">충족률 = 현재고 ÷ 당월 목표재고(SCP) × 100 (${ft}% 미달시 부족분 추가)</div>
+      <div style="font-size:12px;color:#888">목표재고 증감 = 당월목표(SCP예상기말) - 전월목표(재고리스트)</div>
+    </div>
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">적용된 보정 내역</h3>
+    <table class="corr"><thead><tr><th>구분</th><th>내용</th><th>영향</th></tr></thead>
+    <tbody>${corrections||'<tr><td colspan="3" style="color:#888;text-align:center">보정 없음</td></tr>'}</tbody></table>
+  </div>`;
+}
+
+// ── 엑셀 ──
+function dlExcel(){
+  if(!resultData)return;const{data,wn}=resultData;
+  const h=["포장라인","품목수","비재고%","전월일투입","당월일투입","증감","증감률","목표입고","현재고","전월목표","당월목표","목표증감","목표증감률","충족률","부족분","비고"];
+  const rows=data.map(r=>[r.line,r.cnt,`${r.nr}%`,r.d3,r.d4,r.dd,`${r.dr>=0?"+":""}${r.dr}%`,r.tgtProd||r.sale,r.cur,(r.tgt_prev||0),(r.tgt_cur||0),r.td,`${r.tr>=0?"+":""}${r.tr}%`,`${r.ff}%`,r.sh,r.notes]);
+  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"분석결과");
+  XLSX.writeFile(wb,"SCP_부하분석.xlsx");
+}
+
+function showError(msg){const el=document.getElementById('error-box');el.textContent=msg;el.style.display='block';}
+function hideError(){document.getElementById('error-box').style.display='none';}
+
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+
+// 부족분 더블클릭 → 당월 목표재고 대비 부족 품목 상세
+function showShortageModal(line){
+  if(!resultData||!resultData.lineItems)return;
+  const items=resultData.lineItems[line]||[];
+  // SCP 당월 목표재고(tgtScp) 대비 현재고 부족 품목
+  const short=items.filter(it=>it.tgtScp>0 && it.curInv<it.tgtScp).map(it=>({
+    ...it,shortage:it.tgtScp-it.curInv,
+    code:it.combo.split('-')[0],color:it.combo.split('-').slice(1).join('-')
+  })).sort((a,b)=>b.shortage-a.shortage);
+
+  const totalShort=short.reduce((s,it)=>s+it.shortage,0);
+  const totalTgt=short.reduce((s,it)=>s+it.tgtScp,0);
+  const totalCur=short.reduce((s,it)=>s+it.curInv,0);
+  const tm=resultData.targetMonth||5;
+
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📦 ${line} — ${tm}월 목표재고 부족 품목 (${short.length}건)</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div style="padding:12px 20px;background:#fef2f2;border-bottom:1px solid #fecaca;font-size:13px;color:#991b1b">
+          ${tm}월 목표재고 <strong>${F(totalTgt)}</strong> 대비 현재고 <strong>${F(totalCur)}</strong> → 부족분 <strong style="color:#dc2626">${F(totalShort)}</strong>개
+        </div>
+        <div class="modal-body">
+          <table>
+            <thead><tr>
+              <th>단품코드</th><th>색상</th><th style="text-align:right">${tm}월 목표</th>
+              <th style="text-align:right">현재고</th><th style="text-align:right;color:#dc2626">부족량</th>
+            </tr></thead>
+            <tbody>
+              ${short.map(it=>`<tr>
+                <td style="font-weight:600">${it.code}</td>
+                <td>${it.color}</td>
+                <td class="tr">${F(it.tgtScp)}</td>
+                <td class="tr">${F(it.curInv)}</td>
+                <td class="tr" style="color:#dc2626;font-weight:700">${F(it.shortage)}</td>
+              </tr>`).join('')}
+              ${short.length===0?'<tr><td colspan="5" style="text-align:center;color:#888;padding:20px">부족 품목 없음</td></tr>':''}
+              ${short.length>0?`<tr style="font-weight:700;border-top:2px solid #1a1a1a">
+                <td colspan="2">합계</td>
+                <td class="tr">${F(totalTgt)}</td>
+                <td class="tr">${F(totalCur)}</td>
+                <td class="tr" style="color:#dc2626">${F(totalShort)}</td>
+              </tr>`:''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// 충족률 더블클릭 → 전체 품목 충족률 순 상세
+function showFulfillModal(line){
+  const tm=resultData.targetMonth||5;
+  if(!resultData||!resultData.lineItems)return;
+  const items=resultData.lineItems[line]||[];
+  // 당월 목표 대비 충족률 계산 (목표재고 0인 것 제외)
+  const detail=items.filter(it=>it.tgtScp>0).map(it=>({
+    ...it,
+    code:it.combo.split('-')[0],color:it.combo.split('-').slice(1).join('-'),
+    fulfill:+(it.curInv/it.tgtScp*100).toFixed(1),
+    diff:it.curInv-it.tgtScp
+  })).sort((a,b)=>b.fulfill-a.fulfill);  // 충족률 높은 순
+
+  const totalTgt=detail.reduce((s,it)=>s+it.tgtScp,0);
+  const totalCur=detail.reduce((s,it)=>s+it.curInv,0);
+  const totalFf=totalTgt>0?+(totalCur/totalTgt*100).toFixed(1):0;
+
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>📊 ${line} — 당월 목표 대비 충족률 (${detail.length}건, 충족률 높은 순)</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div style="padding:12px 20px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;font-size:13px;color:#166534">
+          라인 전체 충족률: <strong>${totalFf}%</strong> (${tm}월 목표 ${F(totalTgt)} / 현재고 ${F(totalCur)} / 과부족 ${totalCur-totalTgt>=0?"+":""}${F(totalCur-totalTgt)})
+        </div>
+        <div class="modal-body">
+          <table>
+            <thead><tr>
+              <th>단품코드</th><th>색상</th><th style="text-align:right">당월 목표</th>
+              <th style="text-align:right">현재고</th><th style="text-align:right">과부족</th>
+              <th style="text-align:center">충족률</th>
+            </tr></thead>
+            <tbody>
+              ${detail.map(it=>{
+                const fc=it.fulfill<80?'#dc2626':it.fulfill<100?'#f59e0b':it.fulfill<150?'#16a34a':'#2563eb';
+                const bg=it.fulfill<80?'#fef2f2':it.fulfill>200?'#eff6ff':'';
+                return `<tr style="${bg?'background:'+bg:''}">
+                  <td style="font-weight:600">${it.code}</td>
+                  <td>${it.color}</td>
+                  <td class="tr">${F(it.tgtScp)}</td>
+                  <td class="tr">${F(it.curInv)}</td>
+                  <td class="tr" style="color:${it.diff>=0?'#16a34a':'#dc2626'};font-weight:${Math.abs(it.diff)>10?700:400}">${it.diff>=0?"+":""}${F(it.diff)}</td>
+                  <td class="tc" style="color:${fc};font-weight:700">${it.fulfill}%</td>
+                </tr>`;
+              }).join('')}
+              <tr style="font-weight:700;border-top:2px solid #1a1a1a">
+                <td colspan="2">합계</td>
+                <td class="tr">${F(totalTgt)}</td>
+                <td class="tr">${F(totalCur)}</td>
+                <td class="tr" style="color:${totalCur-totalTgt>=0?'#16a34a':'#dc2626'}">${totalCur-totalTgt>=0?"+":""}${F(totalCur-totalTgt)}</td>
+                <td class="tc" style="font-weight:700">${totalFf}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// 일투입 증감 더블클릭 → 품목별 전월 투입 vs 당월 목표입고 비교
+// 일투입 증감 더블클릭 → 품목별 전월 투입 vs 당월 목표입고 + 현재고 + 필요생산
+function showDiffModal(line){
+  if(!resultData||!resultData.lineItems)return;
+  const scpItems=resultData.lineItems[line]||[];
+  const prod=parsed.prod||{};
+  const prodItems=(prod._items||{})[line]||{};
+  const tm=resultData.targetMonth||5;
+  const pm=tm-1;
+  const wp=resultData.wp||21;
+  const wn=resultData.wn||22;
+
+  const rows=[];
+  for(const it of scpItems){
+    if(it.combo.startsWith('ex_'))continue;
+    const prevQty=prodItems[it.combo]||0;
+    const curQty=it.tgtProd||0;  // 목표입고량
+    const curInv=it.curInv||0;
+    const tgtScp=it.tgtScp||0;
+    const diff=curQty-prevQty;
+    const rate=prevQty>0?((diff/prevQty)*100):curQty>0?999:0;
+    const code=it.combo.split('-')[0];
+    const color=it.combo.split('-').slice(1).join('-');
+    rows.push({combo:it.combo,code,color,name:it.name||'',prevQty,curQty,curInv,tgtScp,diff,rate});
+  }
+  rows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+
+  const totalPrev=rows.reduce((s,r)=>s+r.prevQty,0);
+  const totalCur=rows.reduce((s,r)=>s+r.curQty,0);
+  const totalInv=rows.reduce((s,r)=>s+r.curInv,0);
+  const totalTgt=rows.reduce((s,r)=>s+r.tgtScp,0);
+  const totalDiff=totalCur-totalPrev;
+
+  document.getElementById('modal-container').innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="max-width:1100px">
+        <div class="modal-header">
+          <h3>📈 ${line} — 재고품목 목표입고 증감 (${rows.length}건, 편차 큰 순)</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div style="padding:12px 20px;background:#fafaf8;border-bottom:1px solid #e5e2da;font-size:13px;color:#333">
+          ${pm}월 투입 <strong>${F(totalPrev)}</strong> → ${tm}월 목표입고 <strong>${F(totalCur)}</strong> → 증감 <strong style="color:${DC(totalDiff)}">${totalDiff>=0?"+":""}${F(totalDiff)}</strong>
+          <span style="color:#888;margin-left:8px">(일투입: ${D(totalPrev/wp)} → ${D(totalCur/wn)})</span>
+          <div style="font-size:11px;color:#92400e;margin-top:4px">※ SCP 재고품목 한정 · 필요생산 = 목표입고 + ${tm}월목표 − 현재고 (현재고 많으면 필요생산 감소)</div>
+        </div>
+        <div class="modal-body">
+          <table>
+            <thead><tr>
+              <th>단품코드</th><th>색상</th><th>품목명</th>
+              <th style="text-align:right">${pm}월 투입</th>
+              <th style="text-align:right">${tm}월 목표입고</th>
+              <th style="text-align:right">증감</th>
+              <th style="text-align:center">증감률</th>
+              <th style="text-align:right;background:#e0f2fe">현재고</th>
+              <th style="text-align:right;background:#e0f2fe">${tm}월목표</th>
+              
+            </tr></thead>
+            <tbody>
+              ${rows.filter(r=>r.prevQty>0||r.curQty>0).map(r=>{
+                const dc=r.diff<0?'#dc2626':r.diff>0?'#16a34a':'#888';
+                const rateStr=r.rate===999?'신규':(r.rate>=0?"+":"")+r.rate.toFixed(1)+"%";
+                const bg=Math.abs(r.diff)>=50?r.diff<0?'#fef2f2':'#f0fdf4':'';
+                const invHigh=r.curInv>r.tgtScp&&r.tgtScp>0;
+                return '<tr style="'+(bg?'background:'+bg:'')+'">'+
+                  '<td style="font-weight:600">'+r.code+'</td>'+
+                  '<td>'+r.color+'</td>'+
+                  '<td style="font-size:11px;color:#666;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.name+'</td>'+
+                  '<td class="tr">'+(r.prevQty>0?F(r.prevQty):'-')+'</td>'+
+                  '<td class="tr">'+(r.curQty>0?F(r.curQty):'-')+'</td>'+
+                  '<td class="tr" style="color:'+dc+';font-weight:'+(Math.abs(r.diff)>=20?700:400)+'">'+(r.diff>=0?"+":"")+F(r.diff)+'</td>'+
+                  '<td class="tc" style="color:'+dc+'">'+rateStr+'</td>'+
+                  '<td class="tr" style="'+(invHigh?'color:#2563eb;font-weight:700':'')+'">'+F(r.curInv)+'</td>'+
+                  '<td class="tr">'+(r.tgtScp>0?F(r.tgtScp):'-')+'</td>'+
+                  
+                  '</tr>';
+              }).join('')}
+              <tr style="font-weight:700;border-top:2px solid #1a1a1a">
+                <td colspan="3">합계</td>
+                <td class="tr">${F(totalPrev)}</td>
+                <td class="tr">${F(totalCur)}</td>
+                <td class="tr" style="color:${DC(totalDiff)}">${totalDiff>=0?"+":""}${F(totalDiff)}</td>
+                <td class="tc">${totalPrev>0?(totalDiff/totalPrev*100).toFixed(1)+"%":"-"}</td>
+                <td class="tr">${F(totalInv)}</td>
+                <td class="tr">${F(totalTgt)}</td>
+                
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+</script>
