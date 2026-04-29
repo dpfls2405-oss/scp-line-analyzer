@@ -230,6 +230,14 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
           <input class="einp" id="tr-to" placeholder="이관 라인 (예: 벌크)" style="width:120px">
           <button class="btn btn-ghost btn-sm" onclick="addTransferInline()">+ 추가</button>
         </div>
+
+        <h3 style="margin-top:20px">재고 강제 지정</h3>
+        <p style="font-size:11px;color:#888;margin-bottom:8px">SCP에 미등록이라 비재고로 분류되지만, 실제로는 재고로 운영하는 품목을 지정합니다.</p>
+        <div id="force-stock-list" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+          <input class="einp" id="fs-pattern" placeholder="코드 패턴 (예: G20)" style="width:160px">
+          <button class="btn btn-ghost btn-sm" onclick="addForceStock()">+ 추가</button>
+        </div>
       </div>
       <div>
         <h3>추가건 / 신규 제품 수기 입력</h3>
@@ -284,6 +292,7 @@ let lineCapa={  // 라인별 CAPA 기본값
   "M02":150,"후레임2":150,"후레임3":150,
   "플라이트":50,"가죽":50,"부품포장":200
 };
+let forceStockPatterns=["G20"];  // 재고 강제 지정 패턴
 let manualLineMap={};
 let unmappedItems=[];
 let resultData=null;
@@ -326,6 +335,22 @@ function addTransferInline(){
   renderTransfers();
 }
 
+function renderForceStock(){
+  document.getElementById('force-stock-list').innerHTML=forceStockPatterns.map((p,i)=>
+    `<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px">
+      <span class="pill" style="background:#dbeafe;color:#1e40af">${p} → 재고로 처리</span>
+      <button class="del" onclick="forceStockPatterns.splice(${i},1);renderForceStock()">✕</button>
+    </div>`).join('');
+}
+function addForceStock(){
+  const p=document.getElementById('fs-pattern').value.trim();
+  if(!p){showError('코드 패턴을 입력해주세요.');return;}
+  forceStockPatterns.push(p);
+  document.getElementById('fs-pattern').value='';
+  renderForceStock();
+}
+renderForceStock();
+
 function renderExtras(){
   document.getElementById('extra-list').innerHTML=extras.map((ex,i)=>`
     <div class="extra-row">
@@ -356,9 +381,8 @@ function renderCapa(){
 }
 renderCapa();
 
-// ── Supabase 공유 ──
-const SUPA_URL='https://vjkpinqzfqcmaqrsyobo.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqa3BpbnF6ZnFjbWFxcnN5b2JvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzYwNjAsImV4cCI6MjA1ODU1MjA2MH0.gFDTjPlOBfBMNzkDNwkyz9Ri3EhWpHFpvfOmCMOkIVA';
+// ── Supabase 공유 (Vercel API 프록시 경유) ──
+const API_BASE=location.origin+'/api/share';
 
 async function shareResult(){
   if(!lastShareData){showError('먼저 분석을 실행하세요');return;}
@@ -366,9 +390,9 @@ async function shareResult(){
   btn.textContent='저장 중...';btn.disabled=true;
   try{
     const shareObj=JSON.parse(lastShareData);
-    const res=await fetch(`${SUPA_URL}/rest/v1/scp_shares`,{
+    const res=await fetch(API_BASE,{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({data:shareObj})
     });
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
@@ -378,7 +402,6 @@ async function shareResult(){
     const url=location.origin+location.pathname+'?id='+id;
     await navigator.clipboard.writeText(url).catch(()=>{});
     btn.textContent='✓ 링크 복사됨!';btn.style.background='#d1fae5';btn.style.color='#166534';
-    // 링크 표시
     const info=document.getElementById('calc-info');
     if(info)info.innerHTML=`<span style="color:#16a34a">공유 링크: <a href="${url}" target="_blank" style="color:#2563eb">${url}</a> (7일 후 만료)</span>`;
     setTimeout(()=>{btn.textContent='🔗 공유 링크';btn.style.background='#ede9fe';btn.style.color='#6b21a8';btn.disabled=false;},3000);
@@ -388,15 +411,13 @@ async function shareResult(){
   }
 }
 
-// ── Supabase에서 공유 결과 로드 ──
+// ── 공유 결과 로드 (Vercel API 프록시 경유) ──
 async function loadSharedResult(){
   const params=new URLSearchParams(location.search);
   const id=params.get('id');
   if(!id)return false;
   try{
-    const res=await fetch(`${SUPA_URL}/rest/v1/scp_shares?id=eq.${id}&select=data,created_at,expires_at`,{
-      headers:{'apikey':SUPA_KEY}
-    });
+    const res=await fetch(`${API_BASE}?id=${id}`);
     if(!res.ok)return false;
     const rows=await res.json();
     if(!rows||rows.length===0){
@@ -409,19 +430,17 @@ async function loadSharedResult(){
       return true;
     }
     const row=rows[0];
-    // 만료 체크
     if(row.expires_at&&new Date(row.expires_at)<new Date()){
       document.getElementById('result-area').innerHTML=`
         <div style="text-align:center;padding:60px 20px;background:#fff;border:1px solid #e5e2da;border-radius:12px">
           <div style="font-size:48px;margin-bottom:16px">⏰</div>
           <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:8px">공유 링크가 만료되었습니다</div>
-          <div style="font-size:14px;color:#888">7일이 지나 만료된 링크입니다. 새로 분석해주세요.</div>
+          <div style="font-size:14px;color:#888">7일이 지나 만료된 링크입니다.</div>
         </div>`;
       return true;
     }
     const saved=row.data;
     if(!saved||!saved.d)return false;
-    // 축약 키 복원
     const data=saved.d.map(r=>({line:r.l,cnt:r.c,sale:r.s,tgtProd:r.tp,cur:r.cu,tgt_prev:r.tp2,tgt_cur:r.tc,td:r.td,tr:r.tr,nr:r.nr,d3:r.d3,d4:r.d4,dd:r.dd,dr:r.dr,sh:r.sh,ff:r.ff,capa:r.ca,capaRemain:r.cr}));
     const restored={data,targetMonth:saved.tm,wp:saved.wp,wn:saved.wn,timestamp:saved.ts||row.created_at,
       files:{scp:saved.f?.s||'',grd:saved.f?.g||'',prod:saved.f?.p||''},
@@ -662,7 +681,9 @@ function pProd(wb,combos){
     }
     if(!ld[ln])ld[ln]={total:0,nonScp:0};
     ld[ln].total+=q;
-    if(!combos.has(cb))ld[ln].nonScp+=q;
+    // 비재고 판별: SCP에 없으면 비재고, 단 재고 강제 지정 패턴은 재고로 처리
+    const isForceStock=forceStockPatterns.some(p=>cd.includes(p));
+    if(!combos.has(cb)&&!isForceStock)ld[ln].nonScp+=q;
     // 품목별 상세 보존
     if(!prodItems[ln])prodItems[ln]={};
     prodItems[ln][cb]=(prodItems[ln][cb]||0)+q;
