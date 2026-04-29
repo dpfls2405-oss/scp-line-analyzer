@@ -356,43 +356,79 @@ function renderCapa(){
 }
 renderCapa();
 
-// ── URL 공유 ──
-function shareResult(){
+// ── Supabase 공유 ──
+const SUPA_URL='https://vjkpinqzfqcmaqrsyobo.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqa3BpbnF6ZnFjbWFxcnN5b2JvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzYwNjAsImV4cCI6MjA1ODU1MjA2MH0.gFDTjPlOBfBMNzkDNwkyz9Ri3EhWpHFpvfOmCMOkIVA';
+
+async function shareResult(){
   if(!lastShareData){showError('먼저 분석을 실행하세요');return;}
+  const btn=document.getElementById('share-btn');
+  btn.textContent='저장 중...';btn.disabled=true;
   try{
-    const compressed=btoa(unescape(encodeURIComponent(lastShareData)));
-    const url=location.origin+location.pathname+'?r='+encodeURIComponent(compressed);
-    if(url.length>50000){
-      showError('데이터가 너무 커서 URL 공유가 어렵습니다. 엑셀 다운로드를 이용해주세요.');
-      return;
-    }
-    navigator.clipboard.writeText(url).then(()=>{
-      const btn=document.getElementById('share-btn');
-      btn.textContent='✓ 링크 복사됨!';btn.style.background='#d1fae5';btn.style.color='#166534';
-      setTimeout(()=>{btn.textContent='🔗 공유 링크';btn.style.background='#ede9fe';btn.style.color='#6b21a8';},2000);
-    }).catch(()=>{
-      prompt('아래 링크를 복사하세요:',url);
+    const shareObj=JSON.parse(lastShareData);
+    const res=await fetch(`${SUPA_URL}/rest/v1/scp_shares`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({data:shareObj})
     });
-  }catch(e){showError('공유 링크 생성 실패: '+e.message);}
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const rows=await res.json();
+    const id=rows[0]?.id;
+    if(!id)throw new Error('ID 생성 실패');
+    const url=location.origin+location.pathname+'?id='+id;
+    await navigator.clipboard.writeText(url).catch(()=>{});
+    btn.textContent='✓ 링크 복사됨!';btn.style.background='#d1fae5';btn.style.color='#166534';
+    // 링크 표시
+    const info=document.getElementById('calc-info');
+    if(info)info.innerHTML=`<span style="color:#16a34a">공유 링크: <a href="${url}" target="_blank" style="color:#2563eb">${url}</a> (7일 후 만료)</span>`;
+    setTimeout(()=>{btn.textContent='🔗 공유 링크';btn.style.background='#ede9fe';btn.style.color='#6b21a8';btn.disabled=false;},3000);
+  }catch(e){
+    showError('공유 실패: '+e.message);
+    btn.textContent='🔗 공유 링크';btn.style.background='#ede9fe';btn.style.color='#6b21a8';btn.disabled=false;
+  }
 }
 
-// ── URL 파라미터에서 공유 결과 로드 ──
-function loadSharedResult(){
+// ── Supabase에서 공유 결과 로드 ──
+async function loadSharedResult(){
   const params=new URLSearchParams(location.search);
-  const encoded=params.get('r');
-  if(!encoded)return false;
+  const id=params.get('id');
+  if(!id)return false;
   try{
-    const json=decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
-    const saved=JSON.parse(json);
+    const res=await fetch(`${SUPA_URL}/rest/v1/scp_shares?id=eq.${id}&select=data,created_at,expires_at`,{
+      headers:{'apikey':SUPA_KEY}
+    });
+    if(!res.ok)return false;
+    const rows=await res.json();
+    if(!rows||rows.length===0){
+      document.getElementById('result-area').innerHTML=`
+        <div style="text-align:center;padding:60px 20px;background:#fff;border:1px solid #e5e2da;border-radius:12px">
+          <div style="font-size:48px;margin-bottom:16px">⏰</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:8px">공유 링크가 만료되었습니다</div>
+          <div style="font-size:14px;color:#888">7일이 지나 삭제되었거나 잘못된 링크입니다.</div>
+        </div>`;
+      return true;
+    }
+    const row=rows[0];
+    // 만료 체크
+    if(row.expires_at&&new Date(row.expires_at)<new Date()){
+      document.getElementById('result-area').innerHTML=`
+        <div style="text-align:center;padding:60px 20px;background:#fff;border:1px solid #e5e2da;border-radius:12px">
+          <div style="font-size:48px;margin-bottom:16px">⏰</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:8px">공유 링크가 만료되었습니다</div>
+          <div style="font-size:14px;color:#888">7일이 지나 만료된 링크입니다. 새로 분석해주세요.</div>
+        </div>`;
+      return true;
+    }
+    const saved=row.data;
     if(!saved||!saved.d)return false;
     // 축약 키 복원
     const data=saved.d.map(r=>({line:r.l,cnt:r.c,sale:r.s,tgtProd:r.tp,cur:r.cu,tgt_prev:r.tp2,tgt_cur:r.tc,td:r.td,tr:r.tr,nr:r.nr,d3:r.d3,d4:r.d4,dd:r.dd,dr:r.dr,sh:r.sh,ff:r.ff,capa:r.ca,capaRemain:r.cr}));
-    const restored={data,targetMonth:saved.tm,wp:saved.wp,wn:saved.wn,timestamp:saved.ts,
+    const restored={data,targetMonth:saved.tm,wp:saved.wp,wn:saved.wn,timestamp:saved.ts||row.created_at,
       files:{scp:saved.f?.s||'',grd:saved.f?.g||'',prod:saved.f?.p||''},
       extras:saved.ex||[]};
     renderSharedResult(restored);
     return true;
-  }catch(e){console.warn('공유 링크 파싱 실패:',e);return false;}
+  }catch(e){console.warn('공유 로드 실패:',e);return false;}
 }
 
 function renderSharedResult(saved){
@@ -516,10 +552,11 @@ function renderSharedResult(saved){
     </div>`;
 }
 
-// 페이지 로드 시: URL 공유 결과 확인 → 없으면 일반 모드
-if(!loadSharedResult()){
-  // 공유 링크가 아닌 경우 → 일반 앱 모드 (파일 업로드 대기)
-}
+// 페이지 로드 시: Supabase 공유 결과 확인 → 없으면 일반 모드
+(async()=>{
+  const shared=await loadSharedResult();
+  if(!shared){/* 일반 앱 모드 */}
+})();
 
 // ── 라인 매핑 ──
 function gLine(cb,lm){
