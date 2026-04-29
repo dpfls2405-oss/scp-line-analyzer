@@ -248,6 +248,7 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
   <div class="actions">
     <button class="btn btn-primary" id="run-btn" disabled onclick="runCalc()">분석 실행</button>
     <button class="btn btn-secondary" id="dl-btn" style="display:none" onclick="dlExcel()">엑셀 다운로드</button>
+    <button class="btn btn-secondary" id="share-btn" style="display:none;background:#ede9fe;color:#6b21a8;border-color:#c4b5fd" onclick="shareResult()">🔗 공유 링크</button>
     <span id="calc-info" style="font-size:12px;color:#888"></span>
     <div class="tabs" id="tabs" style="display:none">
       <button class="tab active" onclick="showTab('result',this)">분석 결과</button>
@@ -288,7 +289,8 @@ let unmappedItems=[];
 let resultData=null;
 let currentTab='result';
 let lastAnalysis=null;
-let files={scp:'',grd:'',prod:''};  // 파일명 추적
+let files={scp:'',grd:'',prod:''};
+let lastShareData=null;  // 파일명 추적
 
 // ── 유틸 ──
 const N=v=>{const n=parseFloat(String(v??"").replace(/,/g,""));return isNaN(n)?0:n};
@@ -354,26 +356,46 @@ function renderCapa(){
 }
 renderCapa();
 
-// ── 앱 시작 시 직전 분석 결과 로드 ──
-async function loadLastAnalysis(){
+// ── URL 공유 ──
+function shareResult(){
+  if(!lastShareData){showError('먼저 분석을 실행하세요');return;}
   try{
-    const raw=await window.storage?.get('lastAnalysis');
-    if(!raw||!raw.value)return;
-    const saved=JSON.parse(raw.value);
-    if(!saved||!saved.data)return;
-    lastAnalysis=saved;
-    // 설정 복원
-    if(saved.lineCapa){lineCapa={...lineCapa,...saved.lineCapa};renderCapa();}
-    if(saved.wp){document.getElementById('wp').value=saved.wp;}
-    if(saved.wn){document.getElementById('wn').value=saved.wn;}
-    if(saved.targetMonth){document.getElementById('target-month').value=saved.targetMonth;}
-    if(saved.extras&&saved.extras.length>0){extras=saved.extras;renderExtras();}
-    // 직전 결과 표시
-    renderLastAnalysis(saved);
-  }catch(e){console.warn('이전 분석 로드 실패:',e);}
+    const compressed=btoa(unescape(encodeURIComponent(lastShareData)));
+    const url=location.origin+location.pathname+'?r='+encodeURIComponent(compressed);
+    if(url.length>50000){
+      showError('데이터가 너무 커서 URL 공유가 어렵습니다. 엑셀 다운로드를 이용해주세요.');
+      return;
+    }
+    navigator.clipboard.writeText(url).then(()=>{
+      const btn=document.getElementById('share-btn');
+      btn.textContent='✓ 링크 복사됨!';btn.style.background='#d1fae5';btn.style.color='#166534';
+      setTimeout(()=>{btn.textContent='🔗 공유 링크';btn.style.background='#ede9fe';btn.style.color='#6b21a8';},2000);
+    }).catch(()=>{
+      prompt('아래 링크를 복사하세요:',url);
+    });
+  }catch(e){showError('공유 링크 생성 실패: '+e.message);}
 }
 
-function renderLastAnalysis(saved){
+// ── URL 파라미터에서 공유 결과 로드 ──
+function loadSharedResult(){
+  const params=new URLSearchParams(location.search);
+  const encoded=params.get('r');
+  if(!encoded)return false;
+  try{
+    const json=decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
+    const saved=JSON.parse(json);
+    if(!saved||!saved.d)return false;
+    // 축약 키 복원
+    const data=saved.d.map(r=>({line:r.l,cnt:r.c,sale:r.s,tgtProd:r.tp,cur:r.cu,tgt_prev:r.tp2,tgt_cur:r.tc,td:r.td,tr:r.tr,nr:r.nr,d3:r.d3,d4:r.d4,dd:r.dd,dr:r.dr,sh:r.sh,ff:r.ff,capa:r.ca,capaRemain:r.cr}));
+    const restored={data,targetMonth:saved.tm,wp:saved.wp,wn:saved.wn,timestamp:saved.ts,
+      files:{scp:saved.f?.s||'',grd:saved.f?.g||'',prod:saved.f?.p||''},
+      extras:saved.ex||[]};
+    renderSharedResult(restored);
+    return true;
+  }catch(e){console.warn('공유 링크 파싱 실패:',e);return false;}
+}
+
+function renderSharedResult(saved){
   const area=document.getElementById('result-area');
   const ts=saved.timestamp?new Date(saved.timestamp):null;
   const timeStr=ts?`${ts.getFullYear()}.${(ts.getMonth()+1+'').padStart(2,'0')}.${(ts.getDate()+'').padStart(2,'0')} ${(ts.getHours()+'').padStart(2,'0')}:${(ts.getMinutes()+'').padStart(2,'0')}`:'';
@@ -381,30 +403,40 @@ function renderLastAnalysis(saved){
   const tots=data.reduce((a,r)=>{a.cnt+=r.cnt;a.d3+=r.d3;a.d4+=r.d4;a.tgtProd+=(r.tgtProd||0);a.sale+=(r.sale||0);a.tgt_prev+=(r.tgt_prev||0);a.tgt_cur+=(r.tgt_cur||0);a.sh+=(r.sh||0);return a;},{cnt:0,d3:0,d4:0,tgtProd:0,sale:0,tgt_prev:0,tgt_cur:0,sh:0});
   const tm=saved.targetMonth||5;
   const pm=tm-1;
+  const wp=saved.wp||22;const wn=saved.wn||20;
   const prods=data.filter(r=>r.line!=="부품포장");
   const parts=data.filter(r=>r.line==="부품포장");
   
   const mkMiniRow=r=>{
     const dc=r.dd<0?'#dc2626':r.dd>0?'#16a34a':'#888';
-    const capaTd=r.capa>0?`<td class="tc" style="font-size:11px">${r.capa}</td><td class="tc" style="color:${r.capaRemain<0?'#dc2626':r.capaRemain<30?'#f59e0b':'#16a34a'};font-size:11px;font-weight:${r.capaRemain<0?700:400}">${r.capaRemain!==null?((r.capaRemain>=0?'+':'')+D(r.capaRemain)):'-'}</td>`:`<td class="tc" style="color:#ccc;font-size:11px">-</td><td class="tc" style="color:#ccc;font-size:11px">-</td>`;
+    const capaTd=r.capa>0?`<td class="tc" style="font-size:12px">${r.capa}</td><td class="tc" style="color:${r.capaRemain<0?'#dc2626':r.capaRemain<30?'#f59e0b':'#16a34a'};font-size:12px;font-weight:${r.capaRemain<0?700:400}">${r.capaRemain!==null?((r.capaRemain>=0?'+':'')+D(r.capaRemain)+' <span style="font-size:10px;opacity:0.7">('+(r.capa>0?(r.capaRemain/r.capa*100).toFixed(0):0)+'%)</span>'):'-'}</td>`:`<td class="tc" style="color:#ccc;font-size:12px">-</td><td class="tc" style="color:#ccc;font-size:12px">-</td>`;
     return `<tr style="border-bottom:1px solid #f0ede5">
-      <td style="padding:5px 8px;font-weight:600;font-size:12px">${r.line}</td>
+      <td style="padding:6px 10px;font-weight:600;font-size:13px">${r.line}</td>
+      <td class="tc" style="font-size:12px">${r.cnt}</td>
+      <td class="tr" style="font-size:12px">${F(r.tgtProd||r.sale)}</td>
       <td class="tc" style="font-size:12px">${D(r.d3)}</td>
-      <td class="tc" style="font-size:12px;font-weight:600">${D(r.d4)}</td>
+      <td class="tc" style="font-size:13px;font-weight:600">${D(r.d4)}</td>
       <td class="tc" style="color:${dc};font-weight:${Math.abs(r.dd)>10?700:400};font-size:12px">${r.dd>=0?'+':''}${D(r.dd)}</td>
       <td class="tc" style="color:${dc};font-size:12px">${r.dr>=0?'+':''}${r.dr.toFixed(1)}%</td>
+      <td class="tr" style="font-size:12px">${F(r.cur)}</td>
+      <td class="tr" style="font-size:12px">${F(r.tgt_cur)}</td>
+      <td class="tc" style="font-size:12px;color:${r.ff<90?'#dc2626':'#888'};font-weight:${r.ff<90?700:400}">${r.ff.toFixed(0)}%</td>
       ${capaTd}
     </tr>`;
   };
-  const mkMiniSub=(rows,label)=>{
-    const s=rows.reduce((a,r)=>{a.d3+=r.d3;a.d4+=r.d4;return a;},{d3:0,d4:0});
+  const mkMiniSub=(rows,label,cls)=>{
+    const s=rows.reduce((a,r)=>{a.cnt+=r.cnt;a.d3+=r.d3;a.d4+=r.d4;a.tp+=(r.tgtProd||r.sale||0);a.cur+=r.cur;a.tc+=(r.tgt_cur||0);return a;},{cnt:0,d3:0,d4:0,tp:0,cur:0,tc:0});
     const dd=+(s.d4-s.d3).toFixed(1);const dr=s.d3>0?+((s.d4-s.d3)/s.d3*100).toFixed(1):0;
-    return `<tr style="font-weight:700;background:#f5f5f0;border-top:1px solid #ddd;border-bottom:1px solid #ddd">
-      <td style="padding:5px 8px;font-size:12px">${label}</td>
-      <td class="tc" style="font-size:12px">${D(s.d3)}</td><td class="tc" style="font-size:12px">${D(s.d4)}</td>
+    return `<tr style="font-weight:700;${cls==='total'?'border-top:2px solid #1a1a1a;border-bottom:2px solid #1a1a1a':'background:#f5f5f0;border-top:1px solid #ddd;border-bottom:1px solid #ddd'}">
+      <td style="padding:6px 10px;font-size:13px">${label}</td>
+      <td class="tc" style="font-size:12px">${s.cnt}</td>
+      <td class="tr" style="font-size:12px">${F(s.tp)}</td>
+      <td class="tc" style="font-size:12px">${D(s.d3)}</td><td class="tc" style="font-size:13px">${D(s.d4)}</td>
       <td class="tc" style="color:${DC(dd)};font-size:12px">${dd>=0?'+':''}${D(dd)}</td>
       <td class="tc" style="color:${DC(dr)};font-size:12px">${dr>=0?'+':''}${dr.toFixed(1)}%</td>
-      <td colspan="2"></td></tr>`;
+      <td class="tr" style="font-size:12px">${F(s.cur)}</td>
+      <td class="tr" style="font-size:12px">${F(s.tc)}</td>
+      <td colspan="3"></td></tr>`;
   };
   
   // CAPA 현황
@@ -413,27 +445,35 @@ function renderLastAnalysis(saved){
   const looseCapa=capaLines.filter(r=>r.capaRemain>=0).sort((a,b)=>b.capaRemain-a.capaRemain);
   const fmtOver=r=>`${r.line}(${D(Math.abs(r.capaRemain))}개/일, ${Math.abs(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 부족)`;
   const fmtLoose=r=>`${r.line}(${D(r.capaRemain)}개/일, ${(r.capa>0?(r.capaRemain/r.capa*100):0).toFixed(0)}% 여유)`;
+  
+  // 추가건 표시
+  const extrasHtml=saved.extras&&saved.extras.length>0?
+    `<div style="padding:10px 20px;border-bottom:1px solid #e5e2da;font-size:12px;color:#7c3aed;background:#faf5ff">
+      📌 추가건: ${saved.extras.map(e=>`${e.l||e.line} ${e.n||e.label} +${e.q||e.qty}`).join(' / ')}
+    </div>`:'';
 
   area.innerHTML=`
     <div style="background:#fff;border:1px solid #e5e2da;border-radius:12px;overflow:hidden">
-      <div style="padding:16px 20px;background:#fafaf8;border-bottom:1px solid #e5e2da;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:16px;font-weight:800;color:#1a1a1a">📋 직전 분석 결과 — ${tm}월 SCP 부하 분석</div>
-          <div style="font-size:12px;color:#888;margin-top:4px">
-            분석 시각: ${timeStr} · 사용 파일: ${saved.files?.scp||'-'} / ${saved.files?.grd||'-'} / ${saved.files?.prod||'-'}
+      <div style="padding:16px 20px;background:linear-gradient(135deg,#fafaf8,#f0edff);border-bottom:1px solid #e5e2da">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:17px;font-weight:800;color:#1a1a1a">📋 ${tm}월 SCP 라인별 부하 분석</div>
+            <div style="font-size:12px;color:#888;margin-top:4px">
+              분석 시각: ${timeStr} · 사용 파일: ${saved.files?.scp||'-'}
+            </div>
           </div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:11px;color:#888">파일을 올리고 [분석 실행] 하면 새 결과로 갱신됩니다</div>
+          <div style="background:#ede9fe;padding:6px 12px;border-radius:8px;font-size:11px;color:#6b21a8;font-weight:600">🔗 공유된 분석 결과</div>
         </div>
       </div>
       
       <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #e5e2da">
-        <div class="card"><div class="lab">당월 목표입고</div><div class="val">${F(tots.tgtProd||tots.sale)}</div></div>
-        <div class="card"><div class="lab">일투입 (${pm}월→${tm}월)</div><div class="val" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${D(tots.d3)} → ${D(tots.d4)}</div><div class="sub" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${tots.d4-tots.d3>=0?'+':''}${D(tots.d4-tots.d3)}</div></div>
+        <div class="card"><div class="lab">${tm}월 목표입고</div><div class="val">${F(tots.tgtProd||tots.sale)}</div></div>
+        <div class="card"><div class="lab">일투입 (${pm}월${wp}일→${tm}월${wn}일)</div><div class="val" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${D(tots.d3)} → ${D(tots.d4)}</div><div class="sub" style="color:${tots.d4-tots.d3<0?'#dc2626':'#16a34a'}">${tots.d4-tots.d3>=0?'+':''}${D(tots.d4-tots.d3)}</div></div>
         <div class="card"><div class="lab">목표재고 (${pm}월→${tm}월)</div><div class="val" style="color:#7c3aed">${F(tots.tgt_prev)} → ${F(tots.tgt_cur)}</div></div>
         <div class="card"><div class="lab">예상 목표재고 부족분</div><div class="val" style="color:${tots.sh>0?'#dc2626':'#888'}">${F(tots.sh)}개</div></div>
       </div>
+      
+      ${extrasHtml}
       
       ${capaLines.length>0?`<div style="padding:14px 20px;border-bottom:1px solid #e5e2da;background:#faf5ff">
         <div style="font-size:13px;font-weight:700;color:#6b21a8;margin-bottom:6px">⚡ CAPA 현황</div>
@@ -446,30 +486,40 @@ function renderLastAnalysis(saved){
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:#1a1a1a;color:#fff">
-            <th style="padding:6px 8px;font-size:11px">라인</th>
-            <th style="padding:6px 8px;font-size:11px">${pm}월</th>
-            <th style="padding:6px 8px;font-size:11px">${tm}월</th>
-            <th style="padding:6px 8px;font-size:11px">증감</th>
-            <th style="padding:6px 8px;font-size:11px">증감률</th>
-            <th style="padding:6px 8px;font-size:11px">CAPA</th>
-            <th style="padding:6px 8px;font-size:11px">잔여</th>
+            <th style="padding:7px 10px;font-size:11px;text-align:left">라인</th>
+            <th style="padding:7px 6px;font-size:11px">품목</th>
+            <th style="padding:7px 6px;font-size:11px">목표입고</th>
+            <th style="padding:7px 6px;font-size:11px">${pm}월</th>
+            <th style="padding:7px 6px;font-size:11px">${tm}월</th>
+            <th style="padding:7px 6px;font-size:11px">증감</th>
+            <th style="padding:7px 6px;font-size:11px">증감률</th>
+            <th style="padding:7px 6px;font-size:11px">현재고</th>
+            <th style="padding:7px 6px;font-size:11px">${tm}월목표</th>
+            <th style="padding:7px 6px;font-size:11px">충족률</th>
+            <th style="padding:7px 6px;font-size:11px">CAPA</th>
+            <th style="padding:7px 6px;font-size:11px">잔여여유</th>
           </tr></thead>
           <tbody>
             ${prods.map(mkMiniRow).join('')}
-            ${mkMiniSub(prods,'제품 소계')}
-            <tr><td colspan="7" style="height:4px;background:#fafaf8"></td></tr>
+            ${mkMiniSub(prods,'제품 소계','sub')}
+            <tr><td colspan="12" style="height:4px;background:#fafaf8"></td></tr>
             ${parts.map(mkMiniRow).join('')}
-            ${parts.length?mkMiniSub(parts,'부품 소계'):''}
-            <tr><td colspan="7" style="height:4px;background:#fafaf8"></td></tr>
-            ${mkMiniSub(data,'합계')}
+            ${parts.length?mkMiniSub(parts,'부품 소계','sub'):''}
+            <tr><td colspan="12" style="height:4px;background:#fafaf8"></td></tr>
+            ${mkMiniSub(data,'합계','total')}
           </tbody>
         </table>
+      </div>
+      <div style="padding:12px 20px;background:#fafaf8;font-size:11px;color:#888;text-align:center">
+        일투입 = (SCP 목표입고량 + 비재고 유지 + 추가건) ÷ 영업일 · 충족률 = 현재고 ÷ 당월 목표재고 × 100
       </div>
     </div>`;
 }
 
-// 페이지 로드 시 실행
-loadLastAnalysis();
+// 페이지 로드 시: URL 공유 결과 확인 → 없으면 일반 모드
+if(!loadSharedResult()){
+  // 공유 링크가 아닌 경우 → 일반 앱 모드 (파일 업로드 대기)
+}
 
 // ── 라인 매핑 ──
 function gLine(cb,lm){
@@ -757,20 +807,21 @@ function runCalc(){
     }
     res.sort((a,b)=>a.dr-b.dr);
     resultData={data:res,wp,wn,ft,skipped,targetMonth:parsed.scp.targetMonth||5,lineItems,grdByLine};
-    // 직전 분석 결과 저장 (storage)
+    // URL 공유용 데이터 준비
     try{
-      const saveData={
-        data:res,wp,wn,ft,targetMonth:parsed.scp.targetMonth||5,
-        timestamp:new Date().toISOString(),
-        files:{scp:files.scp||'',grd:files.grd||'',prod:files.prod||''},
-        extras:extras.filter(e=>e.line&&e.qty>0),
-        lineCapa:{...lineCapa}
+      const shareData={
+        d:res.map(r=>({l:r.line,c:r.cnt,s:r.sale,tp:r.tgtProd,cu:r.cur,tp2:r.tgt_prev,tc:r.tgt_cur,td:r.td,tr:r.tr,nr:r.nr,d3:r.d3,d4:r.d4,dd:r.dd,dr:r.dr,sh:r.sh,ff:r.ff,ca:r.capa,cr:r.capaRemain})),
+        wp,wn,tm:parsed.scp.targetMonth||5,
+        ts:new Date().toISOString(),
+        f:{s:files.scp||'',g:files.grd||'',p:files.prod||''},
+        ex:extras.filter(e=>e.line&&e.qty>0).map(e=>({l:e.line,q:e.qty,b:e.brand,s:e.series,n:e.label}))
       };
-      window.storage?.set('lastAnalysis',JSON.stringify(saveData));
-    }catch(e){console.warn('저장 실패:',e);}
+      lastShareData=JSON.stringify(shareData);
+    }catch(e){console.warn('공유 데이터 생성 실패:',e);}
     const info=skipped>0?`⚠ ${skipped}개 품목 라인 미배정으로 제외됨`:`${res.length}개 라인 분석 완료`;
     document.getElementById('calc-info').textContent=info;
     document.getElementById('dl-btn').style.display='';
+    document.getElementById('share-btn').style.display='';
     document.getElementById('tabs').style.display='flex';
     hideError();
     renderResult(currentTab);
