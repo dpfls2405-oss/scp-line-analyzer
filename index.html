@@ -638,6 +638,7 @@ function buildSharedAmount(amt,tm){
     <div style="font-size:14px;font-weight:700;color:#92400e">💰 ${tm}월 생산 예상액은 <span style="font-size:18px;color:#1a1a1a">${fmtW(amt.daily)}/일</span>, <span style="font-size:18px;color:#1a1a1a">${fmtW(amt.total)}/월</span> (입고가 기준)로 추정됩니다.</div>
     <div style="font-size:11px;color:#888;margin-top:4px">재고 ${fmtW(amt.stock)} + 비재고 추정 ${fmtW(amt.nsEst)}${amt.lobby>0?' + 로비수출 '+fmtW(amt.lobby):''}</div>
   </div>`;
+}
 
 // 페이지 로드 시: Supabase 공유 결과 확인 → 없으면 일반 모드
 (async()=>{
