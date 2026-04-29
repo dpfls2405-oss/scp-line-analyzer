@@ -281,7 +281,7 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
 const SHEETS=["시디즈 의자 SCP","퍼시스 의자 SCP","일룸 의자 SCP","데스커 의자 SCP"];
 const BRANDS=["시디즈","퍼시스","일룸","데스커"];
 const EXCL=["A/S포장","도장(반제품)","재봉(반제품)","로비&수출포장(조립5)","리라이프","틸트(반제품)","우레탄","T30"];
-const ALLLINES=["TC13(조립5)","벌크","도장(외부출고)","T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","M02","후레임2","후레임3","플라이트","가죽","부품포장","(직접입력)"];
+const ALLLINES=["TC13(조립5)","벌크","도장(외부출고)","T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","M02","후레임2","후레임3","플라이트","가죽","부품포장","신제품","(직접입력)"];
 
 // ── 상태 ──
 let parsed={};
@@ -646,17 +646,21 @@ function pSCP(wb){
     const{saleCol,tgtCol,prodCol,prodAmtCol}=cols;
     if(saleCol<0){console.warn(`${SHEETS[si]}: 판매예상량 컬럼 없음`);continue;}
     for(let i=3;i<raw.length;i++){const r=raw[i];
-      if(String(r[7]??"").trim()!=="재고"||String(r[6]??"").trim()!=="사용")continue;
+      const useType=String(r[6]??"").trim();
+      const stockType=String(r[7]??"").trim();
+      if(stockType!=="재고")continue;
+      if(useType!=="사용"&&useType!=="개발")continue;
       const sup=String(r[9]??"").trim();
       if(b==="시디즈"?sup!=="시디즈제품":!sup.includes("평택"))continue;
       const c=String(r[4]??"").trim();if(!c)continue;
       combos.add(c);
       const saleVal=N(r[saleCol]);
       const tgtProd=prodCol>=0?N(r[prodCol]):0;
-      const price=N(r[14]);  // 시디즈 입고가
-      const prodAmt=prodAmtCol>=0?N(r[prodAmtCol]):(tgtProd*price);  // 목표입고금액
+      const price=N(r[14]);
+      const prodAmt=prodAmtCol>=0?N(r[prodAmtCol]):(tgtProd*price);
+      const isDev=useType==="개발";
       items.push({brand:b,series:String(r[0]??"").trim(),combo:c,name:String(r[5]??"").trim().substring(0,40),
-        sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0,price,prodAmt});
+        sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0,price,prodAmt,isDev});
     }
   }
   return{items,combos,targetMonth};
@@ -819,8 +823,14 @@ function runCalc(){
     const rows=[];
     let skipped=0;
     for(const it of items){
-      const ln=gLine(it.combo,lm);
-      if(!ln||EXCL.includes(ln)){if(!ln)skipped++;continue;}
+      let ln=gLine(it.combo,lm);
+      if(!ln||EXCL.includes(ln)){
+        if(it.isDev){
+          ln='신제품';  // 개발품목은 신제품 라인으로
+        }else{
+          if(!ln)skipped++;continue;
+        }
+      }
       rows.push({...it,line:ln,curInv:im[it.combo]||0,tgtMar:tm[it.combo]||0});
     }
     // 추가건
