@@ -630,6 +630,7 @@ function findMonthCols(raw, targetMonth){
     if((h==='목표재고'||h==='타겟재고') && tgtCol<0) tgtCol=i;
     if(h==='목표 입고' && prodCol<0) prodCol=i;
     if(h==='목표입고금액' && prodAmtCol<0) prodAmtCol=i;
+    if(h==='목표생산금액' && prodAmtCol<0) prodAmtCol=i;
   }
   return{saleCol,tgtCol,prodCol,prodAmtCol,startCol,endCol};
 }
