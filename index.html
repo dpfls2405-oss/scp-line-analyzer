@@ -950,7 +950,6 @@ function runCalc(){
     res.sort((a,b)=>a.dr-b.dr);
     resultData={data:res,wp,wn,ft,skipped,targetMonth:parsed.scp.targetMonth||5,lineItems,grdByLine};
     // TOP10 + 금액 데이터 수집
-    const prod=parsed.prod||{};
     const allDiffItems=[];
     for(const r of res){
       const scpItems=lineItems[r.line]||[];
