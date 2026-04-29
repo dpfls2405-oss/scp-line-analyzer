@@ -248,6 +248,12 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
         <h3 style="margin-top:20px">라인별 CAPA (일 생산능력)</h3>
         <p style="font-size:11px;color:#888;margin-bottom:8px">각 라인의 일일 최대 생산능력을 입력합니다. 0이면 무제한으로 간주합니다.</p>
         <div id="capa-list"></div>
+
+        <h3 style="margin-top:20px">비재고 라인 수기 금액 (월간)</h3>
+        <p style="font-size:11px;color:#888;margin-bottom:8px">전량 비재고로 운영되는 라인의 월간 생산 예상 금액을 입력합니다.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div><label class="cfg-label">로비&수출포장 (원)</label><input class="einp" type="number" id="amt-lobby" value="0" style="width:120px" placeholder="예: 500000000"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -617,14 +623,15 @@ function findMonthCols(raw, targetMonth){
   for(let i=startCol+1;i<row1.length;i++){
     if(String(row1[i]??'').trim().match(/^\d+월$/)){endCol=i;break;}
   }
-  let saleCol=-1, tgtCol=-1, prodCol=-1;
+  let saleCol=-1, tgtCol=-1, prodCol=-1, prodAmtCol=-1;
   for(let i=startCol;i<endCol;i++){
     const h=String(row2[i]??'').trim();
     if(h==='판매예상량' && saleCol<0) saleCol=i;
     if((h==='목표재고'||h==='타겟재고') && tgtCol<0) tgtCol=i;
     if(h==='목표 입고' && prodCol<0) prodCol=i;
+    if(h==='목표입고금액' && prodAmtCol<0) prodAmtCol=i;
   }
-  return{saleCol,tgtCol,prodCol,startCol,endCol};
+  return{saleCol,tgtCol,prodCol,prodAmtCol,startCol,endCol};
 }
 
 function pSCP(wb){
@@ -635,7 +642,7 @@ function pSCP(wb){
     const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
     const cols=findMonthCols(raw,targetMonth);
     if(!cols){console.warn(`${SHEETS[si]}: ${targetMonth}월 컬럼 탐지 실패`);continue;}
-    const{saleCol,tgtCol,prodCol}=cols;
+    const{saleCol,tgtCol,prodCol,prodAmtCol}=cols;
     if(saleCol<0){console.warn(`${SHEETS[si]}: 판매예상량 컬럼 없음`);continue;}
     for(let i=3;i<raw.length;i++){const r=raw[i];
       if(String(r[7]??"").trim()!=="재고"||String(r[6]??"").trim()!=="사용")continue;
@@ -644,9 +651,11 @@ function pSCP(wb){
       const c=String(r[4]??"").trim();if(!c)continue;
       combos.add(c);
       const saleVal=N(r[saleCol]);
-      const tgtProd=prodCol>=0?N(r[prodCol]):0;  // 목표 입고량
+      const tgtProd=prodCol>=0?N(r[prodCol]):0;
+      const price=N(r[14]);  // 시디즈 입고가
+      const prodAmt=prodAmtCol>=0?N(r[prodAmtCol]):(tgtProd*price);  // 목표입고금액
       items.push({brand:b,series:String(r[0]??"").trim(),combo:c,name:String(r[5]??"").trim().substring(0,40),
-        sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0});
+        sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0,price,prodAmt});
     }
   }
   return{items,combos,targetMonth};
@@ -827,12 +836,12 @@ function runCalc(){
     const la={};
     const lineItems={};  // 라인별 품목 상세 보존
     for(const r of rows){
-      if(!la[r.line])la[r.line]={sale:0,tgtProd:0,tgtScp:0,cur:0,tgt:0,cnt:0,notes:[]};
+      if(!la[r.line])la[r.line]={sale:0,tgtProd:0,tgtScp:0,cur:0,tgt:0,cnt:0,prodAmt:0,notes:[]};
       if(!lineItems[r.line])lineItems[r.line]=[];
-      const a=la[r.line];a.sale+=r.sale;a.tgtProd+=(r.tgtProd||0);a.tgtScp+=(r.tgtScp||0);a.cur+=r.curInv;a.tgt+=r.tgtMar;a.cnt++;
+      const a=la[r.line];a.sale+=r.sale;a.tgtProd+=(r.tgtProd||0);a.tgtScp+=(r.tgtScp||0);a.cur+=r.curInv;a.tgt+=r.tgtMar;a.cnt++;a.prodAmt+=(r.prodAmt||0);
       if(r.note)a.notes.push(r.note);
       lineItems[r.line].push({combo:r.combo,name:r.name||'',brand:r.brand||'',series:r.series||'',
-        curInv:r.curInv,tgtMar:r.tgtMar,tgtScp:r.tgtScp||0,sale:r.sale,tgtProd:r.tgtProd||0});
+        curInv:r.curInv,tgtMar:r.tgtMar,tgtScp:r.tgtScp||0,sale:r.sale,tgtProd:r.tgtProd||0,price:r.price||0,prodAmt:r.prodAmt||0});
     }
     // grd_list 기준 품목별 상세도 라인별로 모음 (SCP에 없는 품목 포함)
     const grdByLine={};
@@ -861,7 +870,8 @@ function runCalc(){
       const td=tgt_cur-tgt_prev, tr2=tgt_prev>0?(td/tgt_prev*100):0;
       const capa=lineCapa[ln]||0;
       const capaRemain=capa>0?+(capa-d4).toFixed(1):null;
-      res.push({line:ln,cnt:a.cnt,sale:a.sale,tgtProd:a.tgtProd,cur:a.cur,tgt_prev,tgt_cur,td,tr:+tr2.toFixed(1),nr:+pd.ratio.toFixed(1),d3:+d3.toFixed(1),d4:+d4.toFixed(1),dd:+dd.toFixed(1),dr:+dr.toFixed(1),sh,ff:+ff.toFixed(1),capa,capaRemain,notes:a.notes.join(", ")});
+      const stockAmt=a.prodAmt;const nsRatio=pd.ratio;const nsEstAmt=nsRatio>0&&nsRatio<100?Math.round(stockAmt*(nsRatio/(100-nsRatio))):0;const totalAmt=stockAmt+nsEstAmt;const dailyAmt=wn>0?Math.round(totalAmt/wn):0;
+      res.push({line:ln,cnt:a.cnt,sale:a.sale,tgtProd:a.tgtProd,cur:a.cur,tgt_prev,tgt_cur,td,tr:+tr2.toFixed(1),nr:+pd.ratio.toFixed(1),d3:+d3.toFixed(1),d4:+d4.toFixed(1),dd:+dd.toFixed(1),dr:+dr.toFixed(1),sh,ff:+ff.toFixed(1),stockAmt,nsEstAmt,totalAmt,dailyAmt,capa,capaRemain,notes:a.notes.join(", ")});
     }
     res.sort((a,b)=>a.dr-b.dr);
     resultData={data:res,wp,wn,ft,skipped,targetMonth:parsed.scp.targetMonth||5,lineItems,grdByLine};
@@ -1074,6 +1084,28 @@ function buildAnalysisSummary(data,tots,prevMonth,targetMonth,wp,wn){
         </table>
       </div>
     </div>
+    
+    ${buildAmountSummary(data,targetMonth,wn)}
+  </div>`;
+}
+
+function buildAmountSummary(data,targetMonth,wn){
+  const lobbyAmt=N(document.getElementById('amt-lobby')?.value||0);
+  const fmtW=n=>{if(n>=100000000)return (n/100000000).toFixed(1)+'억';if(n>=10000)return (n/10000).toFixed(0)+'만';return F(n);};
+  const fmtM=n=>(n/1000000).toFixed(0);  // 백만원 단위
+  
+  let totalStock=0,totalNsEst=0;
+  const lineAmts=data.map(r=>{
+    totalStock+=r.stockAmt||0;totalNsEst+=r.nsEstAmt||0;
+    return{line:r.line,stock:r.stockAmt||0,nsEst:r.nsEstAmt||0,total:r.totalAmt||0,daily:r.dailyAmt||0,nr:r.nr};
+  }).sort((a,b)=>b.total-a.total);
+  
+  const grandTotal=totalStock+totalNsEst+lobbyAmt;
+  const grandDaily=wn>0?Math.round(grandTotal/wn):0;
+  
+  return `<div style="margin-top:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px">
+    <div style="font-size:14px;font-weight:700;color:#92400e">💰 ${targetMonth}월 생산 예상액은 <span style="font-size:18px;color:#1a1a1a">${fmtW(grandDaily)}/일</span>, <span style="font-size:18px;color:#1a1a1a">${fmtW(grandTotal)}/월</span> (입고가 기준)로 추정됩니다.</div>
+    <div style="font-size:11px;color:#888;margin-top:6px">재고 ${fmtW(totalStock)} + 비재고 추정 ${fmtW(totalNsEst)}${lobbyAmt>0?' + 로비수출 '+fmtW(lobbyAmt):''} · 비재고 추정 = 재고금액 × (비재고율 ÷ (100-비재고율))</div>
   </div>`;
 }
 
