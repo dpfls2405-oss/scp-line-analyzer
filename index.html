@@ -233,10 +233,19 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
 
         <h3 style="margin-top:20px">재고 강제 지정</h3>
         <p style="font-size:11px;color:#888;margin-bottom:8px">SCP에 미등록이라 비재고로 분류되지만, 실제로는 재고로 운영하는 품목을 지정합니다.</p>
-        <div id="force-stock-list" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
-          <input class="einp" id="fs-pattern" placeholder="코드 패턴 (예: G20)" style="width:160px">
-          <button class="btn btn-ghost btn-sm" onclick="addForceStock()">+ 추가</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#be185d;margin-bottom:6px">📊 비재고 투입 TOP 10 (전월 실적)</div>
+            <div id="nonstock-top10" style="font-size:11px;color:#888">③ 생산계획 파일 업로드 후 표시됩니다</div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">✅ 재고로 강제 지정된 패턴</div>
+            <div id="force-stock-list" style="margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+              <input class="einp" id="fs-pattern" placeholder="코드 패턴 (예: G20)" style="width:160px">
+              <button class="btn btn-ghost btn-sm" onclick="addForceStock()">+ 추가</button>
+            </div>
+          </div>
         </div>
       </div>
       <div>
@@ -354,6 +363,35 @@ function addForceStock(){
   forceStockPatterns.push(p);
   document.getElementById('fs-pattern').value='';
   renderForceStock();
+}
+function renderNsTop10(){
+  const el=document.getElementById('nonstock-top10');
+  if(!el)return;
+  if(!parsed.prod||!parsed.prod._nsItems){
+    el.innerHTML='<span style="color:#888">③ 생산계획 파일 업로드 후 표시됩니다</span>';return;
+  }
+  const ns=parsed.prod._nsItems;
+  const sorted=Object.entries(ns).map(([cb,v])=>({...v,combo:cb})).sort((a,b)=>b.qty-a.qty).slice(0,10);
+  if(sorted.length===0){el.innerHTML='<span style="color:#16a34a">비재고 품목 없음</span>';return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="background:#fef2f2">
+      <th style="padding:3px 4px;text-align:left">#</th>
+      <th style="padding:3px 4px;text-align:left">라인</th>
+      <th style="padding:3px 4px;text-align:left">단품코드</th>
+      <th style="padding:3px 4px;text-align:left">색상</th>
+      <th style="padding:3px 4px;text-align:right">수량</th>
+      <th style="padding:3px 4px"></th>
+    </tr></thead>
+    <tbody>${sorted.map((it,i)=>`<tr style="border-bottom:1px solid #f0ede5">
+      <td style="padding:3px 4px;color:#888">${i+1}</td>
+      <td style="padding:3px 4px">${it.line}</td>
+      <td style="padding:3px 4px;font-weight:600">${it.code}</td>
+      <td style="padding:3px 4px">${it.color}</td>
+      <td style="padding:3px 4px;text-align:right;color:#be185d;font-weight:600">${F(it.qty)}</td>
+      <td style="padding:3px 4px"><button style="font-size:10px;padding:1px 6px;border:1px solid #93c5fd;border-radius:4px;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="forceStockPatterns.push('${it.code}');renderForceStock();renderNsTop10()">재고지정</button></td>
+    </tr>`).join('')}</tbody>
+  </table>
+  <div style="font-size:10px;color:#888;margin-top:4px">※ 전월 투입 기준 · 재고 강제 지정 패턴 제외 후 집계</div>`;
 }
 renderForceStock();
 
@@ -746,27 +784,32 @@ function pGrd(wb){
 function pProd(wb,combos){
   const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
   const ld={};
-  const prodItems={};  // 라인별 품목 상세: {combo → qty}
+  const prodItems={};
+  const nsItems={};  // 비재고 품목별 수량 집계: {combo → {qty, line, name}}
   for(let i=1;i<raw.length;i++){
     const r=raw[i];
     let ln=String(r[12]??"").trim().replace("라인]","");
     if(!ln||EXCL.includes(ln))continue;
     const cd=String(r[3]??"").trim(),cl=String(r[5]??"").trim(),q=N(r[8]),cb=`${cd}-${cl}`,ex2=String(r[16]??"").trim();
+    const name=String(r[4]??"").trim().substring(0,25);
     for(const t of transfers){
       if(t.pattern&&cd.includes(t.pattern)&&(!t.from||ln===t.from)){if(t.expEx&&ex2.includes("수출"))continue;ln=t.to;}
       if(t.code&&cd.startsWith(t.code))ln=t.to;
     }
     if(!ld[ln])ld[ln]={total:0,nonScp:0};
     ld[ln].total+=q;
-    // 비재고 판별: SCP에 없으면 비재고, 단 재고 강제 지정 패턴은 재고로 처리
     const isForceStock=forceStockPatterns.some(p=>cd.includes(p));
-    if(!combos.has(cb)&&!isForceStock)ld[ln].nonScp+=q;
-    // 품목별 상세 보존
+    if(!combos.has(cb)&&!isForceStock){
+      ld[ln].nonScp+=q;
+      if(!nsItems[cb])nsItems[cb]={qty:0,line:ln,name,code:cd,color:cl};
+      nsItems[cb].qty+=q;
+    }
     if(!prodItems[ln])prodItems[ln]={};
     prodItems[ln][cb]=(prodItems[ln][cb]||0)+q;
   }
   for(const d of Object.values(ld))d.ratio=d.total>0?(d.nonScp/d.total*100):0;
-  ld._items=prodItems;  // 품목별 상세 첨부
+  ld._items=prodItems;
+  ld._nsItems=nsItems;  // 비재고 품목 상세
   return ld;
 }
 
@@ -787,6 +830,7 @@ function loadFile(input,type){
         if(!parsed.scp){showError("SCP를 먼저 업로드하세요");return;}
         parsed._prodWb=wb;parsed.prod=pProd(wb,parsed.scp.combos);files.prod=file.name;
         document.getElementById('s-prod').innerHTML=`<div class="fname" style="background:#ede9fe;color:#7c3aed">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.prod).length}라인</div>`;
+        renderNsTop10();
       }
       document.getElementById('u-'+type).classList.add('done');
       const allReady=parsed.scp&&parsed.grd&&parsed.prod;
@@ -886,6 +930,7 @@ function runCalc(){
     // 설정 변경(재고 강제 지정 등) 반영을 위해 prod 재파싱
     if(parsed._prodWb) parsed.prod=pProd(parsed._prodWb,combos);
     const prod=parsed.prod;
+    renderNsTop10();
     const rows=[];
     let skipped=0;
     for(const it of items){
