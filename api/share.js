@@ -1,6 +1,6 @@
 const https=require('https');
-const SUPA_HOST='vjkpinqzfqcmaqrsyobo.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqa3BpbnF6ZnFjbWFxcnN5b2JvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzYwNjAsImV4cCI6MjA1ODU1MjA2MH0.gFDTjPlOBfBMNzkDNwkyz9Ri3EhWpHFpvfOmCMOkIVA';
+const SUPA_HOST='icacwoylqfhqnmoaiehv.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYWN3b3lscWZocW5tb2FpZWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NTY5ODQsImV4cCI6MjA4OTQzMjk4NH0.2BXbe0tTGworzJliY1gjiQn1XuRk--qOZAjpyqxzF38';
 
 function supaReq(method,path,body){
   return new Promise((resolve,reject)=>{
