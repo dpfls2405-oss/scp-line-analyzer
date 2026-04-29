@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/share.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     { "source": "/api/share", "destination": "/api/share" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
