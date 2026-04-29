@@ -785,7 +785,7 @@ function loadFile(input,type){
         document.getElementById('s-grd').innerHTML=`<div class="fname" style="background:#d1fae5;color:#059669">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.grd.lm).length}건</div>`;
       }else if(type==="prod"){
         if(!parsed.scp){showError("SCP를 먼저 업로드하세요");return;}
-        parsed.prod=pProd(wb,parsed.scp.combos);files.prod=file.name;
+        parsed._prodWb=wb;parsed.prod=pProd(wb,parsed.scp.combos);files.prod=file.name;
         document.getElementById('s-prod').innerHTML=`<div class="fname" style="background:#ede9fe;color:#7c3aed">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.prod).length}라인</div>`;
       }
       document.getElementById('u-'+type).classList.add('done');
@@ -882,7 +882,10 @@ function runCalc(){
     const wp=+document.getElementById('wp').value||21;
     const wn=+document.getElementById('wn').value||22;
     const ft=+document.getElementById('ft').value||90;
-    const{items,combos}=parsed.scp,{lm,im,tm}=parsed.grd,prod=parsed.prod;
+    const{items,combos}=parsed.scp,{lm,im,tm}=parsed.grd;
+    // 설정 변경(재고 강제 지정 등) 반영을 위해 prod 재파싱
+    if(parsed._prodWb) parsed.prod=pProd(parsed._prodWb,combos);
+    const prod=parsed.prod;
     const rows=[];
     let skipped=0;
     for(const it of items){
