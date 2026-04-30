@@ -544,6 +544,8 @@ async function loadSharedResult(){
         const sharedSc=saved.sc.map(s=>({name:s.n,color:s.c,lines:s.l}));
         window._sharedSubCo=sharedSc;
       }
+      // CAPA 설정값 복원
+      if(saved.cp){for(const[ln,cap]of Object.entries(saved.cp))lineCapa[ln]=cap;}
       resultData={data,wp:saved.wp,wn:firstMr.wn,targetMonth:firstMonth,
         monthResults,months,monthlyLines:saved.ml||null};
       renderSharedMultiMonth(saved,months,monthResults);
@@ -668,11 +670,22 @@ function renderSharedMultiMonth(saved,months,monthResults){
       </div>
       
       <div style="padding:16px 20px;border-bottom:1px solid #e5e2da">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px">📈 소회사별 일투입 추이</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          ${sc.map((s,si)=>`<div style="border:1px solid ${s.color}33;border-radius:10px;padding:12px;cursor:pointer" ondblclick="showFullChart(${si})">
+            <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:8px"><span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:2px;margin-right:4px"></span>${s.name}</div>
+            <div id="subco-chart-${si}"></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      
+      <div style="padding:16px 20px;border-bottom:1px solid #e5e2da">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px">📊 월별 라인별 생산 추이</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead>
             <tr style="background:#1a1a1a;color:#fff">
               <th style="padding:5px 8px;text-align:left" rowspan="2">라인</th>
+              <th style="padding:5px 4px;text-align:center;font-size:10px" rowspan="2">8h CAPA</th>
               ${months.map((m,i)=>`<th colspan="3" style="padding:5px 4px;text-align:center;background:${colors[i%3]}22;color:${colors[i%3]};border-left:2px solid #333">${m}월 (${monthResults[m].wn}일)</th>`).join('')}
             </tr>
             <tr style="background:#f5f5f0">
@@ -680,26 +693,20 @@ function renderSharedMultiMonth(saved,months,monthResults){
             </tr>
           </thead>
           <tbody>
-            ${lineData.map(d=>`<tr style="border-bottom:1px solid #f0ede5">
+            ${lineData.map(d=>{
+              const sharedCapa=(saved.cp&&saved.cp[d.line])||0;
+              return `<tr style="border-bottom:1px solid #f0ede5">
               <td style="padding:4px 8px;font-weight:600;font-size:12px">${d.line}</td>
+              <td style="padding:3px 4px;text-align:center;font-size:11px;color:${sharedCapa>0?'#6b21a8':'#ccc'}">${sharedCapa>0?sharedCapa:'-'}</td>
               ${d.vals.map((v,mi)=>`<td style="padding:3px 4px;text-align:right;font-size:12px;border-left:2px solid #f0ede5">${F(v.tp)}</td><td style="padding:3px 4px;text-align:right;font-weight:600;color:${colors[mi%3]};font-size:12px">${D(v.d4)}</td><td style="padding:3px 4px;text-align:right;font-size:11px;color:#888">${v.amt>=1e8?(v.amt/1e8).toFixed(1)+'억':Math.round(v.amt/1e7)+'백만'}</td>`).join('')}
-            </tr>`).join('')}
+            </tr>`;}).join('')}
             <tr style="font-weight:700;border-top:2px solid #1a1a1a">
               <td style="padding:5px 8px">합계</td>
+              <td></td>
               ${monthSums.map((s,mi)=>`<td style="padding:4px 4px;text-align:right;border-left:2px solid #ddd">${F(s.tp)}</td><td style="padding:4px 4px;text-align:right;color:${colors[mi%3]}">${D(s.d4)}</td><td style="padding:4px 4px;text-align:right;font-size:11px">${fmtW(s.amt)}</td>`).join('')}
             </tr>
           </tbody>
         </table>
-      </div>
-      
-      <div style="padding:16px 20px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px">📈 소회사별 일투입 추이</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-          ${sc.map((s,si)=>`<div style="border:1px solid ${s.color}33;border-radius:10px;padding:12px;cursor:pointer" ondblclick="showFullChart(${si})">
-            <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:8px"><span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:2px;margin-right:4px"></span>${s.name}</div>
-            <div id="subco-chart-${si}"></div>
-          </div>`).join('')}
-        </div>
       </div>
     </div>`;
   
@@ -1280,6 +1287,9 @@ function runCalc(){
       }
       // 소회사 정보도 공유
       shareData.sc=subCompanies.map(s=>({n:s.name,c:s.color,l:s.lines}));
+      // CAPA 설정값 공유
+      shareData.cp={};
+      for(const[ln,cap]of Object.entries(lineCapa)){if(cap>0)shareData.cp[ln]=cap;}
       lastShareData=JSON.stringify(shareData);
     }catch(e){console.warn('공유 데이터 생성 실패:',e);}
     
@@ -1550,7 +1560,6 @@ function buildMonthlyChart(targetMonth){
     const vals=months.map(mo=>{
       const tp=ml[mo]?.[ln]?.tp||0;
       const amt=ml[mo]?.[ln]?.amt||0;
-      // 해당 월 결과에서 일투입/비재고율 가져오기
       const mrd=mr[mo]?.data?.find(r=>r.line===ln);
       const d4=mrd?.d4||0;
       const nr=mrd?.nr||0;
@@ -1573,8 +1582,32 @@ function buildMonthlyChart(targetMonth){
   const maxTp=Math.max(...lineData.flatMap(d=>d.vals.map(v=>v.tp)),1);
   const colors=['#2563eb','#16a34a','#f59e0b'];
   
+  // 소회사별 그래프 (테이블 위에 배치) + 라인 필터링 체크박스
+  const subcoHtml=`
+    <div style="margin-bottom:20px">
+      <div style="font-size:15px;font-weight:800;margin-bottom:14px;color:#1a1a1a">📈 소회사별 일투입 추이 (전월 실적 포함) <span style="font-size:11px;font-weight:400;color:#888">— 더블클릭 시 전체화면 · 체크박스로 라인 필터링</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        ${subCompanies.map((sc,si)=>`
+          <div style="background:#fff;border:1px solid ${sc.color}33;border-radius:10px;padding:12px">
+            <div style="font-size:13px;font-weight:700;color:${sc.color};margin-bottom:6px;cursor:pointer" ondblclick="showFullChart(${si})">
+              <span style="display:inline-block;width:10px;height:10px;background:${sc.color};border-radius:2px;margin-right:4px"></span>${sc.name}
+              <span style="font-size:10px;font-weight:400;color:#888;margin-left:4px">더블클릭→확대</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px" id="subco-filter-${si}">
+              ${sc.lines.map(ln=>`<label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer;padding:1px 4px;border-radius:3px;border:1px solid ${sc.color}44;background:${sc.color}08">
+                <input type="checkbox" checked data-si="${si}" data-line="${ln.replace(/'/g,"&#39;")}" onchange="toggleChartLine(${si})" style="width:10px;height:10px">${ln}
+              </label>`).join('')}
+            </div>
+            <div id="subco-chart-${si}" style="cursor:pointer" ondblclick="showFullChart(${si})"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  
   const html=`<div style="padding:20px;border-bottom:1px solid #e5e2da">
     <div style="font-size:15px;font-weight:800;margin-bottom:14px;color:#1a1a1a">📊 월별 라인별 생산 추이 (${months.map(m=>m+'월').join(' / ')})</div>
+    
+    ${subcoHtml}
     
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1622,23 +1655,14 @@ function buildMonthlyChart(targetMonth){
       </table>
     </div>
     <div style="font-size:11px;color:#888;margin-top:8px">금액 = 재고 입고금액 + 비재고 추정(비재고율 기반) · 일투입 = (목표입고 + 비재고) ÷ 영업일</div>
-    
-    <div style="margin-top:20px">
-      <div style="font-size:15px;font-weight:800;margin-bottom:14px;color:#1a1a1a">📈 소회사별 일투입 추이 (전월 실적 포함) <span style="font-size:11px;font-weight:400;color:#888">— 더블클릭 시 전체화면</span></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-        ${subCompanies.map((sc,si)=>`
-          <div style="background:#fff;border:1px solid ${sc.color}33;border-radius:10px;padding:12px;cursor:pointer" ondblclick="showFullChart(${si})">
-            <div style="font-size:13px;font-weight:700;color:${sc.color};margin-bottom:8px">
-              <span style="display:inline-block;width:10px;height:10px;background:${sc.color};border-radius:2px;margin-right:4px"></span>${sc.name}
-            </div>
-            <div id="subco-chart-${si}"></div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
   </div>`;
   setTimeout(()=>initSubCoCharts(lineData,months,mr),100);
   return html;
+}
+
+// 체크박스 필터링: 소회사 차트에서 라인 토글
+function toggleChartLine(si){
+  drawSubCoChart(si,false);
 }
 
 function initSubCoCharts(lineData,months,mr){
@@ -1669,8 +1693,21 @@ function drawSubCoChart(si,fullscreen){
   const elId=fullscreen?'fullchart-svg':`subco-chart-${si}`;
   const el=document.getElementById(elId);
   if(!el)return;
-  const selectedLines=sc.lines;
-  const W=fullscreen?1100:380,H=fullscreen?500:240,PL=50,PR=fullscreen?90:60,PT=25,PB=45;
+  
+  // 체크박스 필터링: 체크된 라인만 표시
+  let selectedLines=sc.lines;
+  if(!fullscreen){
+    const filterEl=document.getElementById(`subco-filter-${si}`);
+    if(filterEl){
+      const checks=filterEl.querySelectorAll('input[type=checkbox]');
+      if(checks.length>0){
+        selectedLines=[];
+        checks.forEach(cb=>{if(cb.checked)selectedLines.push(cb.dataset.line);});
+      }
+    }
+  }
+  
+  const W=fullscreen?1100:380,H=fullscreen?500:240,PL=50,PR=fullscreen?140:80,PT=25,PB=45;
   const cw=W-PL-PR,ch=H-PT-PB;
   const nPts=chartMonths.length;
   
@@ -1717,8 +1754,23 @@ function drawSubCoChart(si,fullscreen){
       const ty=p.y-(fullscreen?10:7);const tfs=fullscreen?10:8;
       svg+=`<text x="${p.x}" y="${ty}" text-anchor="middle" font-size="${tfs}" fill="${s.color}" font-weight="600">${Math.round(s.vals[i]*10)/10}</text>`;
     }
+    // 마지막 포인트 옆에 라인명 + CAPA 정보 표시
     const last=pts[pts.length-1];
-    svg+=`<text x="${last.x+6}" y="${last.y+4}" font-size="${fullscreen?11:8}" fill="${s.color}" font-weight="700">${s.line}</text>`;
+    const lastVal=s.vals[s.vals.length-1];
+    const capa=lineCapa[s.line]||0;
+    let capaLabel='';
+    if(capa>0){
+      const remain=capa-lastVal;
+      const pct=(remain/capa*100).toFixed(0);
+      if(remain<0) capaLabel=` (초과 ${Math.abs(pct)}%)`;
+      else capaLabel=` (여유 ${pct}%)`;
+    }
+    const labelFs=fullscreen?11:8;
+    const labelY1=last.y+(fullscreen?0:-1);
+    const labelY2=last.y+(fullscreen?13:8);
+    const capaFs=fullscreen?9:7;
+    svg+=`<text x="${last.x+6}" y="${labelY1}" font-size="${labelFs}" fill="${s.color}" font-weight="700">${s.line}</text>`;
+    svg+=`<text x="${last.x+6}" y="${labelY2}" font-size="${capaFs}" fill="${capa>0&&(capa-lastVal)<0?'#dc2626':'#888'}">${D(lastVal)}${capaLabel}</text>`;
   }
   svg+=`</svg>`;
   el.innerHTML=svg;
