@@ -670,11 +670,19 @@ function renderSharedMultiMonth(saved,months,monthResults){
       </div>
       
       <div style="padding:16px 20px;border-bottom:1px solid #e5e2da">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px">📈 소회사별 일투입 추이</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px">📈 소회사별 일투입 추이 <span style="font-size:11px;font-weight:400;color:#888">— 체크박스로 라인 필터링 · 더블클릭 시 전체화면</span></div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-          ${sc.map((s,si)=>`<div style="border:1px solid ${s.color}33;border-radius:10px;padding:12px;cursor:pointer" ondblclick="showFullChart(${si})">
-            <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:8px"><span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:2px;margin-right:4px"></span>${s.name}</div>
-            <div id="subco-chart-${si}"></div>
+          ${sc.map((s,si)=>`<div style="border:1px solid ${s.color}33;border-radius:10px;padding:12px">
+            <div style="font-size:13px;font-weight:700;color:${s.color};margin-bottom:6px;cursor:pointer" ondblclick="showFullChart(${si})">
+              <span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:2px;margin-right:4px"></span>${s.name}
+              <span style="font-size:10px;font-weight:400;color:#888;margin-left:4px">더블클릭→확대</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px" id="subco-filter-${si}">
+              ${s.lines.map(ln=>`<label style="font-size:10px;display:flex;align-items:center;gap:1px;cursor:pointer;padding:1px 4px;border-radius:3px;border:1px solid ${s.color}44;background:${s.color}08">
+                <input type="checkbox" checked data-si="${si}" data-line="${ln.replace(/'/g,"&#39;")}" onchange="toggleChartLine(${si})" style="width:10px;height:10px">${ln}
+              </label>`).join('')}
+            </div>
+            <div id="subco-chart-${si}" style="cursor:pointer" ondblclick="showFullChart(${si})"></div>
           </div>`).join('')}
         </div>
       </div>
@@ -1696,18 +1704,16 @@ function drawSubCoChart(si,fullscreen){
   
   // 체크박스 필터링: 체크된 라인만 표시
   let selectedLines=sc.lines;
-  if(!fullscreen){
-    const filterEl=document.getElementById(`subco-filter-${si}`);
-    if(filterEl){
-      const checks=filterEl.querySelectorAll('input[type=checkbox]');
-      if(checks.length>0){
-        selectedLines=[];
-        checks.forEach(cb=>{if(cb.checked)selectedLines.push(cb.dataset.line);});
-      }
+  const filterEl=document.getElementById(`subco-filter-${si}`);
+  if(filterEl){
+    const checks=filterEl.querySelectorAll('input[type=checkbox]');
+    if(checks.length>0){
+      selectedLines=[];
+      checks.forEach(cb=>{if(cb.checked)selectedLines.push(cb.dataset.line);});
     }
   }
   
-  const W=fullscreen?1100:380,H=fullscreen?500:240,PL=50,PR=fullscreen?140:80,PT=25,PB=45;
+  const W=fullscreen?1100:380,H=fullscreen?500:240,PL=50,PR=fullscreen?90:60,PT=25,PB=45;
   const cw=W-PL-PR,ch=H-PT-PB;
   const nPts=chartMonths.length;
   
@@ -1720,7 +1726,9 @@ function drawSubCoChart(si,fullscreen){
   
   const allVals=series.flatMap(s=>s.vals);
   if(allVals.length===0){el.innerHTML='<div style="color:#888;font-size:12px;padding:20px;text-align:center">데이터 없음</div>';return;}
-  const maxY=Math.max(...allVals,1)*1.2;
+  // CAPA 값도 Y축 범위에 포함시켜 점선이 잘리지 않게
+  const capaVals=series.map(s=>lineCapa[s.line]||0).filter(v=>v>0);
+  const maxY=Math.max(...allVals,...capaVals,1)*1.15;
   const xStep=nPts>1?cw/(nPts-1):cw;
   const fs=fullscreen?1:0.85;
   
@@ -1744,6 +1752,16 @@ function drawSubCoChart(si,fullscreen){
     const bx=PL+xStep*0.5;
     svg+=`<line x1="${bx}" y1="${PT}" x2="${bx}" y2="${PT+ch}" stroke="${sc.color}" stroke-width="1" stroke-dasharray="5,3" opacity="0.3"/>`;
   }
+  // CAPA 기준선: 라인 색상의 흐린 점선 + 오른쪽 끝에 작은 CAPA 값 표시
+  for(const s of series){
+    const cap=lineCapa[s.line]||0;
+    if(cap>0&&cap<=maxY){
+      const cy=PT+ch-(cap/maxY*ch);
+      svg+=`<line x1="${PL}" y1="${cy}" x2="${PL+cw}" y2="${cy}" stroke="${s.color}" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.3"/>`;
+      svg+=`<text x="${PL+cw+3}" y="${cy+3}" font-size="${fullscreen?9:7}" fill="${s.color}" opacity="0.5">${cap}</text>`;
+    }
+  }
+  // 데이터 라인
   for(const s of series){
     const pts=s.vals.map((v,i)=>({x:PL+i*xStep,y:PT+ch-(v/maxY*ch)}));
     const path=pts.map((p,i)=>i===0?`M ${p.x} ${p.y}`:`L ${p.x} ${p.y}`).join(' ');
@@ -1754,23 +1772,9 @@ function drawSubCoChart(si,fullscreen){
       const ty=p.y-(fullscreen?10:7);const tfs=fullscreen?10:8;
       svg+=`<text x="${p.x}" y="${ty}" text-anchor="middle" font-size="${tfs}" fill="${s.color}" font-weight="600">${Math.round(s.vals[i]*10)/10}</text>`;
     }
-    // 마지막 포인트 옆에 라인명 + CAPA 정보 표시
+    // 마지막 포인트 옆에 라인명만 표시 (깔끔하게)
     const last=pts[pts.length-1];
-    const lastVal=s.vals[s.vals.length-1];
-    const capa=lineCapa[s.line]||0;
-    let capaLabel='';
-    if(capa>0){
-      const remain=capa-lastVal;
-      const pct=(remain/capa*100).toFixed(0);
-      if(remain<0) capaLabel=` (초과 ${Math.abs(pct)}%)`;
-      else capaLabel=` (여유 ${pct}%)`;
-    }
-    const labelFs=fullscreen?11:8;
-    const labelY1=last.y+(fullscreen?0:-1);
-    const labelY2=last.y+(fullscreen?13:8);
-    const capaFs=fullscreen?9:7;
-    svg+=`<text x="${last.x+6}" y="${labelY1}" font-size="${labelFs}" fill="${s.color}" font-weight="700">${s.line}</text>`;
-    svg+=`<text x="${last.x+6}" y="${labelY2}" font-size="${capaFs}" fill="${capa>0&&(capa-lastVal)<0?'#dc2626':'#888'}">${D(lastVal)}${capaLabel}</text>`;
+    svg+=`<text x="${last.x+6}" y="${last.y+4}" font-size="${fullscreen?11:8}" fill="${s.color}" font-weight="700">${s.line}</text>`;
   }
   svg+=`</svg>`;
   el.innerHTML=svg;
