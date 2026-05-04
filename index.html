@@ -1741,7 +1741,20 @@ function drawSubCoChart(si,fullscreen){
   const elId=fullscreen?'fullchart-svg':`subco-chart-${si}`;
   const el=document.getElementById(elId);
   if(!el)return;
-  const selectedLines=sc.lines;
+  
+  // 전체화면: 필터 체크박스에서 선택된 라인만
+  let selectedLines=sc.lines;
+  let showCapa=true;
+  if(fullscreen){
+    const checks=document.querySelectorAll('[data-fullline]');
+    if(checks.length>0){
+      selectedLines=[];
+      checks.forEach(c=>{if(c.checked)selectedLines.push(c.dataset.fullline);});
+    }
+    const capaCheck=document.querySelector('[data-showcapa]');
+    if(capaCheck)showCapa=capaCheck.checked;
+  }
+  
   const W=fullscreen?1100:380,H=fullscreen?500:240,PL=50,PR=fullscreen?90:60,PT=25,PB=45;
   const cw=W-PL-PR,ch=H-PT-PB;
   const nPts=chartMonths.length;
@@ -1750,12 +1763,15 @@ function drawSubCoChart(si,fullscreen){
     const ld=allLD.find(d=>d.line===ln);
     const prev=prevData[ln]||0;
     const vals=[prev,...(ld?ld.vals:[])];
-    return{line:ln,vals,color:lineColors[ln]||'#888'};
+    const capa=lineCapa[ln]||0;
+    return{line:ln,vals,color:lineColors[ln]||'#888',capa};
   }).filter(s=>s.vals.some(v=>v>0));
   
   const allVals=series.flatMap(s=>s.vals);
+  // CAPA 값도 Y축 범위에 포함
+  const capaVals=showCapa?series.filter(s=>s.capa>0).map(s=>s.capa):[];
   if(allVals.length===0){el.innerHTML='<div style="color:#888;font-size:12px;padding:20px;text-align:center">데이터 없음</div>';return;}
-  const maxY=Math.max(...allVals,1)*1.2;
+  const maxY=Math.max(...allVals,...capaVals,1)*1.2;
   const xStep=nPts>1?cw/(nPts-1):cw;
   const fs=fullscreen?1:0.85;
   
@@ -1779,6 +1795,17 @@ function drawSubCoChart(si,fullscreen){
     const bx=PL+xStep*0.5;
     svg+=`<line x1="${bx}" y1="${PT}" x2="${bx}" y2="${PT+ch}" stroke="${sc.color}" stroke-width="1" stroke-dasharray="5,3" opacity="0.3"/>`;
   }
+  // CAPA 기준선
+  if(showCapa){
+    for(const s of series){
+      if(s.capa>0&&s.capa<=maxY){
+        const cy=PT+ch-(s.capa/maxY*ch);
+        svg+=`<line x1="${PL}" y1="${cy}" x2="${PL+cw}" y2="${cy}" stroke="${s.color}" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.5"/>`;
+        svg+=`<text x="${PL+cw+4}" y="${cy+4}" font-size="${fullscreen?9:7}" fill="${s.color}" opacity="0.7">CAPA ${s.capa}</text>`;
+      }
+    }
+  }
+  // 꺾은선
   for(const s of series){
     const pts=s.vals.map((v,i)=>({x:PL+i*xStep,y:PT+ch-(v/maxY*ch)}));
     const path=pts.map((p,i)=>i===0?`M ${p.x} ${p.y}`:`L ${p.x} ${p.y}`).join(' ');
@@ -1798,6 +1825,7 @@ function drawSubCoChart(si,fullscreen){
 
 function showFullChart(si){
   const sc=subCompanies[si];
+  const{lineColors}=window._chartData||{};
   document.getElementById('modal-container').innerHTML=`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal" style="max-width:1200px;width:95%">
@@ -1808,11 +1836,22 @@ function showFullChart(si){
           </h3>
           <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
+        <div style="padding:8px 20px;border-bottom:1px solid #e5e2da;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:11px;color:#888;margin-right:4px">라인 필터:</span>
+          ${sc.lines.map(l=>{
+            const lc=lineColors?.[l]||'#888';
+            return `<label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;padding:2px 8px;border-radius:4px;border:1px solid ${lc}66;background:${lc}10">
+              <input type="checkbox" checked onchange="drawSubCoChart(${si},true)" data-fullline="${l}" style="width:12px;height:12px;accent-color:${lc}">
+              <span style="color:${lc};font-weight:600">${l}</span>
+            </label>`;
+          }).join('')}
+          <label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;padding:2px 8px;border-radius:4px;border:1px dashed #dc2626;background:#fef2f2">
+            <input type="checkbox" checked onchange="drawSubCoChart(${si},true)" data-showcapa="1" style="width:12px;height:12px;accent-color:#dc2626">
+            <span style="color:#dc2626;font-weight:600">CAPA 기준선</span>
+          </label>
+        </div>
         <div class="modal-body" style="padding:20px">
           <div id="fullchart-svg"></div>
-          <div style="margin-top:12px;font-size:12px;color:#888">
-            담당 라인: ${sc.lines.join(', ')}
-          </div>
         </div>
       </div>
     </div>`;
