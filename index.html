@@ -322,6 +322,12 @@ let subCompanies=[
   {name:"정도산업",color:"#2563eb",lines:["도장(외부출고)","TC13(조립5)","후레임2","후레임3","M02"]}
 ];
 let manualLineMap={};
+let manualNsRatio={};  // 라인별 수기 비재고율(%). 비어있으면 생산실적 자동(pProd ratio) 사용
+function setManualNs(line,val){
+  const v=String(val).trim();
+  if(v===''||isNaN(Number(v)))delete manualNsRatio[line];
+  else manualNsRatio[line]=Math.max(0,Math.min(100,Number(v)));
+}
 let unmappedItems=[];
 let resultData=null;
 let currentTab='result';
@@ -336,7 +342,7 @@ const D=n=>n.toFixed(1);
 const DC=(v,t=10)=>v<-t?"#dc2626":v>t?"#16a34a":"inherit";
 
 // ── UI 초기화 ──
-function toggleCfg(){document.getElementById('cfg-panel').classList.toggle('show');document.getElementById('guide-panel').classList.remove('show');}
+function toggleCfg(){const p=document.getElementById('cfg-panel');p.classList.toggle('show');document.getElementById('guide-panel').classList.remove('show');if(p.classList.contains('show'))renderCapa();}
 function toggleGuide(){document.getElementById('guide-panel').classList.toggle('show');document.getElementById('cfg-panel').classList.remove('show');}
 
 function renderTransfers(){
@@ -446,15 +452,17 @@ function saveCapa(){
   const label=`${now.getFullYear()}.${(now.getMonth()+1+'').padStart(2,'0')}.${(now.getDate()+'').padStart(2,'0')} ${(now.getHours()+'').padStart(2,'0')}:${(now.getMinutes()+'').padStart(2,'0')}`;
   // 현재 CAPA 값 수집
   const current={};
+  const currentNs={};
   const lines=ALLLINES.filter(l=>l!=='(직접입력)');
   for(const l of lines){
     const v=lineCapa[l]||0;
     if(v>0)current[l]=v;
+    if(manualNsRatio[l]!=null&&!isNaN(manualNsRatio[l]))currentNs[l]=manualNsRatio[l];
   }
   // 저장 목록 가져오기
   let saved=[];
   try{saved=JSON.parse(localStorage.getItem('scp_capa_history')||'[]');}catch(e){}
-  saved.unshift({label,data:current,ts:now.toISOString()});
+  saved.unshift({label,data:current,ns:currentNs,ts:now.toISOString()});
   if(saved.length>10)saved=saved.slice(0,10);  // 최대 10개
   localStorage.setItem('scp_capa_history',JSON.stringify(saved));
   const st=document.getElementById('capa-save-status');
@@ -475,6 +483,9 @@ function loadCapa(idx){
   // CAPA 값 복원
   const lines=ALLLINES.filter(l=>l!=='(직접입력)');
   for(const l of lines)lineCapa[l]=entry.data[l]||0;
+  // 비재고율(수기) 복원
+  manualNsRatio={};
+  if(entry.ns)for(const l of lines)if(entry.ns[l]!=null&&!isNaN(entry.ns[l]))manualNsRatio[l]=entry.ns[l];
   renderCapa();
   const st=document.getElementById('capa-save-status');
   if(st){st.textContent=`✓ "${entry.label}" 불러옴`;st.style.color='#2563eb';}
@@ -531,14 +542,24 @@ function addExtra(){extras.push({line:"",month:0,qty:0,brand:"",series:"",label:
 
 function renderCapa(){
   const lines=ALLLINES.filter(l=>l!=='(직접입력)');
+  const autoNs=l=>{const pd=parsed.prod&&parsed.prod[l];return pd&&pd.ratio!=null?Math.round(pd.ratio):null;};
   document.getElementById('capa-list').innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px">
-      ${lines.map(l=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+    <div style="display:flex;gap:8px;font-size:10px;color:#888;margin-bottom:4px;padding-left:96px">
+      <span style="width:60px;text-align:center">일CAPA</span><span style="width:62px;text-align:center">비재고율%</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 16px">
+      ${lines.map(l=>{
+        const an=autoNs(l), ek=l.replace(/'/g,"\\'");
+        return `<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
         <span style="font-size:11px;color:#555;width:90px;text-align:right">${l}</span>
         <input class="einp" type="number" style="width:60px;font-size:12px" value="${lineCapa[l]||''}" placeholder="0"
-          oninput="lineCapa['${l.replace(/'/g,"\\'")}']=Number(this.value)">
-      </div>`).join('')}
-    </div>`;
+          oninput="lineCapa['${ek}']=Number(this.value)" title="일 생산능력(개)">
+        <input class="einp" type="number" min="0" max="100" style="width:62px;font-size:12px" value="${manualNsRatio[l]??''}"
+          placeholder="${an!=null?an+' 자동':'자동'}"
+          oninput="setManualNs('${ek}',this.value)" title="비재고율(%). 비우면 생산실적 자동 적용, 입력 시 해당 라인 수기 적용 — 생산액 추정에 반영">
+      </div>`;}).join('')}
+    </div>
+    <div style="font-size:10px;color:#888;margin-top:6px">※ 비재고율: 비우면 생산실적(생산계획) 자동값 적용, 숫자 입력 시 그 라인만 수기 적용. 생산 예상액 추정에 반영됩니다.</div>`;
 }
 renderCapa();
 
@@ -1341,10 +1362,12 @@ function calcOneMonth(monthItems,lm,im,tm,prod,wp,wn,ft,currentMonth){
     const td=tgt_cur-tgt_prev,tr2=tgt_prev>0?(td/tgt_prev*100):0;
     const capa=lineCapa[ln]||0;
     const capaRemain=capa>0?+(capa-d4).toFixed(1):null;
-    const stockAmt=a.prodAmt;const nsRatio=pd.ratio;
+    const stockAmt=a.prodAmt;
+    // 수기 비재고율 우선, 없으면 생산실적 자동(pProd ratio)
+    const nsRatio=(manualNsRatio[ln]!=null&&!isNaN(manualNsRatio[ln]))?Number(manualNsRatio[ln]):pd.ratio;
     const nsEstAmt=nsRatio>0&&nsRatio<100?Math.round(stockAmt*(nsRatio/(100-nsRatio))):0;
     const totalAmt=stockAmt+nsEstAmt;const dailyAmt=wn>0?Math.round(totalAmt/wn):0;
-    res.push({line:ln,cnt:a.cnt,sale:a.sale,tgtProd:a.tgtProd,cur:a.cur,tgt_prev,tgt_cur,td,tr:+tr2.toFixed(1),nr:+pd.ratio.toFixed(1),d3:+d3.toFixed(1),d4:+d4.toFixed(1),dd:+dd.toFixed(1),dr:+dr.toFixed(1),sh,ff:+ff.toFixed(1),stockAmt,nsEstAmt,totalAmt,dailyAmt,capa,capaRemain,notes:a.notes.join(", ")});
+    res.push({line:ln,cnt:a.cnt,sale:a.sale,tgtProd:a.tgtProd,cur:a.cur,tgt_prev,tgt_cur,td,tr:+tr2.toFixed(1),nr:+Number(nsRatio).toFixed(1),d3:+d3.toFixed(1),d4:+d4.toFixed(1),dd:+dd.toFixed(1),dr:+dr.toFixed(1),sh,ff:+ff.toFixed(1),stockAmt,nsEstAmt,totalAmt,dailyAmt,capa,capaRemain,notes:a.notes.join(", ")});
   }
   res.sort((a,b)=>a.dr-b.dr);
   return{data:res,lineItems,skipped};
