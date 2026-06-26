@@ -995,11 +995,17 @@ function gLine(cb,lm){
 }
 
 // ── 파싱 ──
-// 월별 컬럼 구조: row1에 월 표기(4월/5월/6월), row2에 세부 항목
-// 각 월 블록에서 '판매예상량', '목표재고'/'타겟재고' 열 위치를 동적 탐지
+// 월별 컬럼 구조: 월 표기(4월/5월/6월) 행을 자동탐지, 그 다음 행에 세부 항목
+// (의자 SCP 시트는 1행 공백이므로 raw[1] 고정 대신 스캔)
 function findMonthCols(raw, targetMonth){
-  const row1 = raw[1] || [];
-  const row2 = raw[2] || [];
+  // 월 라벨이 있는 행 자동탐지 (최대 5행 스캔)
+  let monthRowIdx = -1;
+  for(let ri=0;ri<Math.min(5,raw.length);ri++){
+    if((raw[ri]||[]).some(c=>String(c??'').trim().match(/^\d+월$/))){monthRowIdx=ri;break;}
+  }
+  if(monthRowIdx<0) return null;
+  const row1 = raw[monthRowIdx] || [];
+  const row2 = raw[monthRowIdx+1] || [];
   const monthLabel = `${targetMonth}월`;
   let startCol = -1;
   for(let i=0;i<row1.length;i++){
@@ -1030,13 +1036,19 @@ function pSCP(wb){
   for(let si=0;si<4;si++){
     const b=BRANDS[si],ws=wb.Sheets[SHEETS[si]];if(!ws)continue;
     const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-    // row1에서 모든 월 탐지
-    const row1=raw[1]||[];
+    // 월 라벨 행 자동탐지 (1행 공백인 의자 SCP 시트 대응)
+    let monthRowIdx=-1;
+    for(let ri=0;ri<Math.min(5,raw.length);ri++){
+      if((raw[ri]||[]).some(c=>String(c??'').trim().match(/^\d+월$/))){monthRowIdx=ri;break;}
+    }
+    if(monthRowIdx<0)continue;
+    const row1=raw[monthRowIdx]||[];
     const sheetMonths=[];
     for(let i=0;i<row1.length;i++){
       const mv=String(row1[i]??'').trim().match(/^(\d+)월$/);
       if(mv)sheetMonths.push(parseInt(mv[1]));
     }
+    const dataStartRow=monthRowIdx+2; // 월행 + 서브헤더행 + 1
     // 각 월별 파싱
     for(const mo of sheetMonths){
       const cols=findMonthCols(raw,mo);
@@ -1044,7 +1056,7 @@ function pSCP(wb){
       availMonths.add(mo);
       if(!allMonthItems[mo])allMonthItems[mo]=[];
       const{saleCol,tgtCol,prodCol,prodAmtCol}=cols;
-      for(let i=3;i<raw.length;i++){
+      for(let i=dataStartRow;i<raw.length;i++){
         const r=raw[i];
         const useType=String(r[6]??"").trim();
         const stockType=String(r[7]??"").trim();
@@ -1127,28 +1139,56 @@ function pProd(wb,combos){
 }
 
 // ── 파일 로딩 ──
+const WANTED_SCP_SHEETS=['SCP계획','시디즈 의자 SCP','퍼시스 의자 SCP','일룸 의자 SCP','데스커 의자 SCP'];
+
+function detectKindFromHeader(rows){
+  for(let i=0;i<Math.min(5,rows.length);i++){
+    const r=rows[i];
+    const has=t=>r.some(c=>String(c??'').includes(t));
+    if(has('계획량')&&has('협력사'))return'prod';
+    if(has('현재고')&&has('목표'))return'grd';
+  }
+  return null;
+}
+
 function loadFile(input,type){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
-      if(type==="scp"){
+      const buf=new Uint8Array(e.target.result);
+      // 수정B: SCP 시트만 선택 파싱 → 단품코드 60만행 OOM 방지
+      const wbScp=XLSX.read(buf,{type:'array',sheets:WANTED_SCP_SHEETS});
+      let detectedType,wb;
+      if(WANTED_SCP_SHEETS.some(s=>wbScp.SheetNames.includes(s))){
+        wb=wbScp; detectedType='scp';
+      }else{
+        // grd / prod 파일: 전체 파싱 후 컬럼 시그니처로 자동 분류
+        wb=XLSX.read(buf,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        detectedType=detectKindFromHeader(rows)||type;
+      }
+      if(detectedType==='scp'){
         parsed.scp=pSCP(wb);files.scp=file.name;
         document.getElementById('s-scp').innerHTML=`<div class="fname" style="background:#dbeafe;color:#2563eb">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${parsed.scp.months.map(m=>m+'월').join('·')} · ${Object.values(parsed.scp.allMonthItems).reduce((s,a)=>s+a.length,0)}건</div>`;
-      }else if(type==="grd"){
+        document.getElementById('u-scp').classList.add('done');
+      }else if(detectedType==='grd'){
         parsed.grd=pGrd(wb);files.grd=file.name;
         document.getElementById('s-grd').innerHTML=`<div class="fname" style="background:#d1fae5;color:#059669">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.grd.lm).length}건</div>`;
-      }else if(type==="prod"){
+        document.getElementById('u-grd').classList.add('done');
+      }else if(detectedType==='prod'){
         if(!parsed.scp){showError("SCP를 먼저 업로드하세요");return;}
         parsed._prodWb=wb;parsed.prod=pProd(wb,parsed.scp.combos);files.prod=file.name;
         document.getElementById('s-prod').innerHTML=`<div class="fname" style="background:#ede9fe;color:#7c3aed">${file.name}</div><div style="font-size:11px;color:#888;margin-top:4px">${Object.keys(parsed.prod).length}라인</div>`;
+        document.getElementById('u-prod').classList.add('done');
         renderNsTop10();
+      }else{
+        showError('파일 종류를 인식할 수 없습니다. 올바른 파일을 확인해주세요.');
+        return;
       }
-      document.getElementById('u-'+type).classList.add('done');
       const allReady=parsed.scp&&parsed.grd&&parsed.prod;
       document.getElementById('run-btn').disabled=!allReady;
-      // 모두 업로드 시 미매핑 감지
       if(allReady)detectUnmapped();
       hideError();
     }catch(err){showError(`파일 오류: ${err.message}`);}
