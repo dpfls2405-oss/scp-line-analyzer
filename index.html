@@ -995,6 +995,22 @@ function gLine(cb,lm){
 }
 
 // ── 파싱 ──
+// 서브헤더 행에서 고정 컬럼 위치를 이름으로 탐지 (하드코딩 방지)
+function findFixedCols(subHeaderRow){
+  const fc={series:0,combo:4,name:5,useType:6,stockType:7,supplier:9,price:14};
+  subHeaderRow.forEach((c,i)=>{
+    const v=String(c??'').trim();
+    if(v==='시리즈'||v==='계열'||v==='브랜드계열')fc.series=i;
+    else if(v==='단품코드')fc.combo=i;
+    else if(v==='품목명'||v==='단품명'||v==='품명')fc.name=i;
+    else if(v==='사용구분'||v==='사용/개발'||v==='구분')fc.useType=i;
+    else if(v==='재고구분'||v==='재고/비재고'||v==='재고여부')fc.stockType=i;
+    else if(v==='공급처'||v==='공급사'||v==='협력사'||v==='제조사')fc.supplier=i;
+    else if(v==='단가'||v==='입고단가'||v==='입고 단가'||v==='기준단가')fc.price=i;
+  });
+  return fc;
+}
+
 // 월별 컬럼 구조: 월 표기(4월/5월/6월) 행을 자동탐지, 그 다음 행에 세부 항목
 // (의자 SCP 시트는 1행 공백이므로 raw[1] 고정 대신 스캔)
 function findMonthCols(raw, targetMonth){
@@ -1049,6 +1065,7 @@ function pSCP(wb){
       if(mv)sheetMonths.push(parseInt(mv[1]));
     }
     const dataStartRow=monthRowIdx+2; // 월행 + 서브헤더행 + 1
+    const fc=findFixedCols(raw[monthRowIdx+1]||[]); // 컬럼 위치 이름으로 탐지
     // 각 월별 파싱
     for(const mo of sheetMonths){
       const cols=findMonthCols(raw,mo);
@@ -1058,20 +1075,20 @@ function pSCP(wb){
       const{saleCol,tgtCol,prodCol,prodAmtCol}=cols;
       for(let i=dataStartRow;i<raw.length;i++){
         const r=raw[i];
-        const useType=String(r[6]??"").trim();
-        const stockType=String(r[7]??"").trim();
+        const useType=String(r[fc.useType]??"").trim();
+        const stockType=String(r[fc.stockType]??"").trim();
         if(stockType!=="재고")continue;
         if(useType!=="사용"&&useType!=="개발")continue;
-        const sup=String(r[9]??"").trim();
+        const sup=String(r[fc.supplier]??"").trim();
         if(b==="시디즈"?sup!=="시디즈제품":!sup.includes("평택"))continue;
-        const c=String(r[4]??"").trim();if(!c)continue;
+        const c=String(r[fc.combo]??"").trim();if(!c)continue;
         combos.add(c);
         const saleVal=saleCol>=0?N(r[saleCol]):0;
         const tgtProd=N(r[prodCol]);
-        const price=N(r[14]);
+        const price=N(r[fc.price]);
         const prodAmt=prodAmtCol>=0?N(r[prodAmtCol]):(tgtProd*price);
         const isDev=useType==="개발";
-        allMonthItems[mo].push({brand:b,series:String(r[0]??"").trim(),combo:c,name:String(r[5]??"").trim().substring(0,40),
+        allMonthItems[mo].push({brand:b,series:String(r[fc.series]??"").trim(),combo:c,name:String(r[fc.name]??"").trim().substring(0,40),
           sale:saleVal,tgtProd,tgtScp:tgtCol>=0?N(r[tgtCol]):0,price,prodAmt,isDev});
       }
     }
