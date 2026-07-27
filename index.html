@@ -298,7 +298,7 @@ table.corr td{padding:6px 10px;border-bottom:1px solid #f0ede5}
 const SHEETS=["시디즈 의자 SCP","퍼시스 의자 SCP","일룸 의자 SCP","데스커 의자 SCP"];
 const BRANDS=["시디즈","퍼시스","일룸","데스커"];
 const EXCL=["A/S포장","도장(반제품)","재봉(반제품)","로비&수출포장(조립5)","리라이프","틸트(반제품)","우레탄","T30"];
-const ALLLINES=["TC13(조립5)","벌크","도장(외부출고)","T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","M02","후레임2","후레임3","플라이트","가죽","부품포장","신제품","(직접입력)"];
+let ALLLINES=["TC13(조립5)","벌크","도장(외부출고)","T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","M02","후레임2","후레임3","플라이트","가죽","부품포장","신제품","(직접입력)"];
 
 // ── 상태 ──
 let parsed={};
@@ -317,7 +317,7 @@ let lineCapa={  // 라인별 CAPA 기본값
 };
 let forceStockPatterns=["G20"];  // 재고 강제 지정 패턴
 let subCompanies=[
-  {name:"지후산업",color:"#16a34a",lines:["T40-2_F","T40_FKD","T80","T50-2","T50-1","T55","가죽","신제품"]},
+  {name:"지후산업",color:"#16a34a",lines:["T40-2_F","T40_FKD","T80","T50-2","T50-1","T53","T55","가죽","신제품"]},
   {name:"태정산업",color:"#dc2626",lines:["부품포장","벌크","플라이트"]},
   {name:"정도산업",color:"#2563eb",lines:["도장(외부출고)","TC13(조립5)","후레임2","후레임3","M02"]}
 ];
@@ -414,6 +414,19 @@ function renderNsTop10(){
 }
 renderForceStock();
 
+// 재고품목·생산계획 데이터에서 발견된 라인 중 미등록(EXCL 제외) 라인을 목록에 자동 추가
+function mergeDiscoveredLines(){
+  const found=new Set();
+  if(parsed.grd&&parsed.grd.lm)for(const v of Object.values(parsed.grd.lm)){if(v)found.add(v);}
+  if(parsed.prod)for(const k of Object.keys(parsed.prod)){if(k!=='_items'&&k!=='_nsItems')found.add(k);}
+  let added=false;
+  for(const ln of found){
+    if(!ln||EXCL.includes(ln)||ALLLINES.includes(ln))continue;
+    ALLLINES.splice(ALLLINES.length-1,0,ln);  // "(직접입력)" 앞에 삽입
+    added=true;
+  }
+  return added;
+}
 function renderSubCoConfig(){
   const lines=ALLLINES.filter(l=>l!=='(직접입력)');
   const el=document.getElementById('subco-config');
@@ -806,7 +819,7 @@ function renderSharedMultiMonth(saved,months,monthResults){
   const prevData={};
   for(const d of firstData){prevData[d.line]=d.d3||0;}
   window._chartData={allLD:sharedLineData,prevData,chartMonths:[months[0]-1,...months],chartLabels:[months[0]-1+'월',...months.map(m=>m+'월')],
-    lineColors:{'TC13(조립5)':'#2563eb','벌크':'#dc2626','도장(외부출고)':'#16a34a','T40-2_F':'#f59e0b','T40_FKD':'#7c3aed','T80':'#0891b2','T50-2':'#be185d','T50-1':'#059669','T55':'#d97706','M02':'#4f46e5','후레임2':'#0d9488','후레임3':'#ca8a04','플라이트':'#db2777','가죽':'#6366f1','부품포장':'#9333ea','신제품':'#e11d48'}};
+    lineColors:{'TC13(조립5)':'#2563eb','벌크':'#dc2626','도장(외부출고)':'#16a34a','T40-2_F':'#f59e0b','T40_FKD':'#7c3aed','T80':'#0891b2','T50-2':'#be185d','T50-1':'#059669','T55':'#d97706','M02':'#4f46e5','후레임2':'#0d9488','후레임3':'#ca8a04','플라이트':'#db2777','가죽':'#6366f1','부품포장':'#9333ea','신제품':'#e11d48','T53':'#0ea5e9'}};
   if(window._sharedSubCo)subCompanies=window._sharedSubCo;
   setTimeout(()=>{for(let i=0;i<subCompanies.length;i++)drawSubCoChart(i,false);},100);
 }
@@ -1242,6 +1255,8 @@ function loadFile(input,type){
         showError('파일 종류를 인식할 수 없습니다. 올바른 파일을 확인해주세요.');
         return;
       }
+      // 데이터에서 발견된 새 라인 자동 등록 (미등록·비EXCL → 설정 목록에 노출)
+      if(mergeDiscoveredLines()){renderCapa();renderSubCoConfig();}
       const allReady=parsed.scp&&parsed.grd&&parsed.prod;
       document.getElementById('run-btn').disabled=!allReady;
       if(allReady)detectUnmapped();
@@ -1829,7 +1844,7 @@ function initSubCoCharts(lineData,months,mr){
   const lineColors={'TC13(조립5)':'#2563eb','벌크':'#dc2626','도장(외부출고)':'#16a34a','T40-2_F':'#f59e0b',
     'T40_FKD':'#7c3aed','T80':'#0891b2','T50-2':'#be185d','T50-1':'#059669','T55':'#d97706',
     'M02':'#4f46e5','후레임2':'#0d9488','후레임3':'#ca8a04','플라이트':'#db2777','가죽':'#6366f1',
-    '부품포장':'#9333ea','신제품':'#e11d48'};
+    '부품포장':'#9333ea','신제품':'#e11d48','T53':'#0ea5e9'};
   const allLD=lineData.map(d=>({line:d.line,vals:d.vals.map(v=>v.d4)}));
   const prevData={};
   for(const d of lineData){
