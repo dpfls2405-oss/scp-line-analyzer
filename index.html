@@ -1136,14 +1136,27 @@ function pSCP(wb){
 
 function pGrd(wb){
   const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+  // 헤더명으로 컬럼 위치 자동탐지 (파일 레이아웃 변경 대응: 재고구분·포장라인 순서 뒤바뀜 등)
+  // 날짜별 컬럼이 뒤에 많으므로 '처음 발견된 컬럼'만 사용 (덮어쓰기 방지)
+  const col={code:-1,color:-1,line:-1,tgt:-1,cur:-1};
+  (raw[0]||[]).forEach((c,i)=>{
+    const v=String(c??"").replace(/\s/g,"");
+    if(col.code<0&&(v==="품목코드"||v==="단품코드"))col.code=i;
+    else if(col.color<0&&(v==="색상"||v==="단품컬러"))col.color=i;
+    else if(col.line<0&&v.includes("포장라인"))col.line=i;
+    else if(col.tgt<0&&v.includes("목표재고"))col.tgt=i;
+    else if(col.cur<0&&v==="현재고")col.cur=i;
+  });
+  if(col.code<0)col.code=1; if(col.color<0)col.color=2;
+  if(col.line<0)col.line=4; if(col.tgt<0)col.tgt=6; if(col.cur<0)col.cur=7;
   const lm={},im={},tm={};
   for(let i=2;i<raw.length;i++){
-    const r=raw[i],cd=String(r[1]??"").trim(),cl=String(r[2]??"").trim();
+    const r=raw[i],cd=String(r[col.code]??"").trim(),cl=String(r[col.color]??"").trim();
     if(!cd||cd==="undefined")continue;
     const cb=`${cd}-${cl}`;
-    let ln=String(r[4]??"").trim().replace("라인]","");
+    let ln=String(r[col.line]??"").trim().replace("라인]","");
     if(!ln||ln==="undefined"||ln==="nan")continue;
-    lm[cb]=ln;if(!lm[cd])lm[cd]=ln;im[cb]=N(r[7]);tm[cb]=N(r[6]);
+    lm[cb]=ln;if(!lm[cd])lm[cd]=ln;im[cb]=N(r[col.cur]);tm[cb]=N(r[col.tgt]);
   }
   return{lm,im,tm};
 }
