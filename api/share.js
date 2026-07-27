@@ -1,7 +1,8 @@
 const https=require('https');
-// ① 방어: https:// 접두사·끝 슬래시·앞뒤 공백을 자동으로 제거 (hostname은 순수 호스트명이어야 함)
-const SUPA_HOST=(process.env.SUPABASE_HOST||'').trim().replace(/^https?:\/\//,'').replace(/\/+$/,'');
-const SUPA_KEY=(process.env.SUPABASE_ANON_KEY||'').trim();
+// ① 방어: 모든 공백·개행 제거 + https:// 접두사·끝 슬래시 제거
+//   (긴 JWT 복사 시 끼어든 줄바꿈이 헤더 ERR_INVALID_CHAR를 유발하므로 \s 전부 제거)
+const SUPA_HOST=(process.env.SUPABASE_HOST||'').replace(/\s/g,'').replace(/^https?:\/\//,'').replace(/\/+$/,'');
+const SUPA_KEY=(process.env.SUPABASE_ANON_KEY||'').replace(/\s/g,'');
 
 function supaReq(method,path,body){
   return new Promise((resolve,reject)=>{
