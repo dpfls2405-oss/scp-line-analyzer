@@ -9,9 +9,12 @@ function supaReq(method,path,body){
     const opts={hostname:SUPA_HOST,port:443,path:`/rest/v1/${path}`,method,
       headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'}};
     const req=https.request(opts,res=>{
-      let data='';
-      res.on('data',c=>data+=c);
-      res.on('end',()=>{try{resolve({status:res.statusCode,data:JSON.parse(data)});}catch(e){resolve({status:res.statusCode,data});}});
+      // 청크(Buffer)를 그대로 모은 뒤 마지막에 한 번만 UTF-8 디코딩.
+      // (개별 청크를 data+=c 로 이어붙이면 한글 등 멀티바이트 문자가
+      //  청크 경계에서 잘려 �(U+FFFD)로 손상됨)
+      const chunks=[];
+      res.on('data',c=>chunks.push(c));
+      res.on('end',()=>{const data=Buffer.concat(chunks).toString('utf8');try{resolve({status:res.statusCode,data:JSON.parse(data)});}catch(e){resolve({status:res.statusCode,data});}});
     });
     req.on('error',reject);
     if(body)req.write(JSON.stringify(body));
