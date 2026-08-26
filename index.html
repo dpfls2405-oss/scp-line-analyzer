@@ -1111,7 +1111,11 @@ function pSCP(wb){
         const r=raw[i];
         const useType=String(r[fc.useType]??"").trim();
         const stockType=String(r[fc.stockType]??"").trim();
-        if(stockType!=="재고")continue;
+        const c=String(r[fc.combo]??"").trim();if(!c)continue;
+        // 재고 강제 지정 패턴에 걸리면 SCP상 '비재고'여도 재고로 취급 (생산계획 집계와 동일 기준)
+        const cdOnly=c.split("-")[0];
+        const isForceStock=forceStockPatterns.some(p=>p&&(c.includes(p)||cdOnly.includes(p)));
+        if(stockType!=="재고"&&!isForceStock)continue;
         if(useType!=="사용"&&useType!=="개발")continue;
         const sup=String(r[fc.supplier]??"").trim();
         // 자사 국내공장(평택 등) 생산품만 — 협력사(외주)·VN(베트남) 제외
@@ -1119,7 +1123,6 @@ function pSCP(wb){
         const isInhouse = sup==="국내"
           || (b==="시디즈" ? sup==="시디즈제품" : sup.includes("평택"));
         if(!isInhouse)continue;
-        const c=String(r[fc.combo]??"").trim();if(!c)continue;
         combos.add(c);
         const saleVal=saleCol>=0?N(r[saleCol]):0;
         const tgtProd=N(r[prodCol]);
